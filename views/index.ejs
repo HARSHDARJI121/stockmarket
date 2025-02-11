@@ -1,0 +1,16 @@
+<%- include('layout') %>
+
+<h1 style="color: blue; text-align: center;">Welcome to StockTrade!</h1>
+<p style="color: blue; text-align: center;">Trade stocks easily and securely.</p>
+
+<div class="image-slider">
+    <button class="nav-button prev" onclick="changeSlide(-1)">&#10094;</button>
+    <div class="slider">
+        <% images.forEach(function(image, index) { %>
+            <img src="<%= image.url %>" alt="<%= image.alt %>" class="<%= index === 0 ? 'active' : '' %>">
+        <% }); %>
+    </div>
+    <button class="nav-button next" onclick="changeSlide(1)">&#10095;</button>
+</div>
+
+<script src="/scripts.js"></script>
