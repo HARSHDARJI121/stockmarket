@@ -38,7 +38,21 @@ app.get('/', (req, res) => {
     }
 });
 
-// Routes for rendering other pages
+// Route for transaction page
+app.get('/transaction', (req, res) => {
+    const plan = req.query.plan;
+    let amount = 0;
+
+    if (plan === "standard") {
+        amount = 1251;
+    } else if (plan === "premium") {
+        amount = 3200;
+    }
+
+    res.render("transaction", { plan, amount });
+});
+
+// Routes for rendering login and signup pages
 app.get('/login', (req, res) => {
     res.render('login');
 });

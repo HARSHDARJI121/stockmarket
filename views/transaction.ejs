@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding: 50px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            margin: auto;
+        }
+        h2 {
+            color: #333;
+        }
+        .qr-code {
+            width: 250px;
+            height: 250px;
+            margin: 20px auto;
+        }
+        .details {
+            font-size: 18px;
+            font-weight: bold;
+            color: #555;
+        }
+        .back-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Complete Your Payment</h2>
+        <p class="details">Plan: <%= plan %></p>
+        <p class="details">Amount: ₹<%= amount %></p>
+
+        <!-- QR Code -->
+        <img src="/images/qr-code.png" alt="Scan to Pay" class="qr-code">
+        
+        <p>Scan the QR Code to complete your payment.</p>
+
+        <a href="/" class="back-button">Go Back</a>
+    </div>
+</body>
+</html>
