@@ -8,7 +8,7 @@ const signup = async (req, res) => {
     try {
         // Check if the user already exists
         const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
-        
+
         if (rows.length > 0) {
             return res.status(400).render('signup', { error: 'User already exists' });
         }
@@ -17,24 +17,35 @@ const signup = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Insert user into the database
-        await db.execute('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', [name, email, hashedPassword]);
+        const [result] = await db.execute('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', [name, email, hashedPassword]);
 
-        // Redirect to login page after successful registration
-        res.redirect('/login');
+        // Now that the user is registered, we can log them in by saving their session
+        // Find the user by email to store their data in the session
+        const [newUserRows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
+
+        // Save user info in session
+        req.session.user = {
+            id: newUserRows[0].id,
+            email: newUserRows[0].email,
+            name: newUserRows[0].name,
+            // Add other user info to session as needed
+        };
+
+        // Redirect to homepage or dashboard after successful signup
+        res.redirect('/');
     } catch (err) {
         console.error(err);
         res.status(500).render('error', { message: 'Server error during signup' });
     }
 };
 
-// Login logic
 const login = async (req, res) => {
     const { email, password } = req.body;
 
     try {
         // Check if the user exists
         const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
-        
+
         if (rows.length === 0) {
             return res.status(400).render('login', { error: 'User not found' });
         }
@@ -46,6 +57,13 @@ const login = async (req, res) => {
             return res.status(400).render('login', { error: 'Incorrect password' });
         }
 
+        // Save user info in the session after successful login
+        req.session.user = {
+            id: rows[0].id,
+            email: rows[0].email,
+            // Add any other user details you want to store in session
+        };
+
         // Redirect to homepage or user dashboard after successful login
         res.redirect('/');
     } catch (err) {
@@ -53,5 +71,6 @@ const login = async (req, res) => {
         res.status(500).render('error', { message: 'Server error during login' });
     }
 };
+
 
 module.exports = { signup, login };

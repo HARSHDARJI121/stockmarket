@@ -1,4 +1,5 @@
 const express = require('express');
+const session = require('express-session');
 const bodyParser = require('body-parser');
 const path = require('path');
 const morgan = require('morgan'); // Logger for better debugging
@@ -13,17 +14,21 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public'))); // Serve static files (CSS, JS, images)
 
+app.use(session({
+    secret: 'pippip-1340',  // Secret key for encrypting session data
+    resave: false,              // Don't resave sessions if no changes
+    saveUninitialized: true,    // Save sessions even if they are not modified
+    cookie: { secure: false }   // For HTTP, set secure to false; for HTTPS, set it to true
+}));
+
 // Set up EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views')); // Directory for EJS views
 
-// Define routes
-app.get('/login', (req, res) => {
-    res.render('login'); // Render login page
-});
-
-app.get('/signup', (req, res) => {
-    res.render('signup'); // Render signup page
+// Middleware to make `user` available in all views if the user is logged in
+app.use((req, res, next) => {
+    res.locals.user = req.session.user || null; // Makes `user` available in all views
+    next();
 });
 
 // Route to render the homepage with dynamic images
@@ -36,7 +41,8 @@ app.get('/', (req, res) => {
             'https://cdn.futura-sciences.com/sources/images/cours%20trading.jpeg',
             'https://img.freepik.com/premium-photo/investment-trading-background-with-bar-charts_1200-1408.jpg?w=2000',
         ];
-        res.render('index', { images });  // Render homepage with images
+        
+        res.render('index', { images });  // Pass images to the view
     } catch (error) {
         console.error('Error rendering index:', error);
         res.status(500).render('error', { message: 'Internal Server Error' });
@@ -57,8 +63,17 @@ app.get('/transaction', (req, res) => {
     res.render('transaction', { plan, amount }); // Render the transaction page with plan details
 });
 
+// Route to render the login page
+app.get('/login', (req, res) => {
+    res.render('login'); // Render login page
+});
+
+// Route to render the signup page
+app.get('/signup', (req, res) => {
+    res.render('signup'); // Render signup page
+});
+
 // Handle POST requests for signup and login via userController
-// Ensure these functions exist in your userController file
 app.post('/signup', (req, res, next) => {
     if (userController.signup) {
         userController.signup(req, res, next); // Call signup function
@@ -75,11 +90,17 @@ app.post('/login', (req, res, next) => {
     }
 });
 
+// Logout route: logs the user out and redirects to the home page
 app.get('/logout', (req, res, next) => {
-    if (userController.logout) {
-        userController.logout(req, res, next); // Call logout function
+    if (req.session.user) {
+        req.session.destroy((err) => {
+            if (err) {
+                return next(err);
+            }
+            res.redirect('/'); // Redirect to the home page after logout
+        });
     } else {
-        next(new Error('Logout handler is missing in the userController.'));
+        res.redirect('/'); // If user is not logged in, just redirect to home
     }
 });
 
