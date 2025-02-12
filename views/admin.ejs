@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+</head>
+<body>
+  <h1>Admin Dashboard</h1>
+
+  <h2>All Users</h2>
+  
+  <% if (users && users.length > 0) { %> <!-- Ensure users is defined and not empty -->
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Plan</th>
+          <th>Subscription Start Date</th>
+          <th>Remaining Days</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach(user => { %>
+          <tr>
+            <td><%= user.name %></td>
+            <td><%= user.email %></td>
+            <td><%= user.plan_name || 'No Plan' %></td>
+            <td><%= user.subscription_start_date %></td>
+            <td><%= user.remainingDays %> days</td>
+            <td>
+              <% if (user.remainingDays <= 0) { %>
+                <span style="color: red;">Expired</span>
+              <% } else { %>
+                <span style="color: green;">Active</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } else { %>
+    <p>No users found.</p>
+  <% } %>
+
+</body>
+</html>

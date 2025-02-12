@@ -4,6 +4,9 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const morgan = require('morgan'); // Logger for better debugging
 const userController = require('./controllers/userController'); // Import the user controller
+const nodemailer = require('nodemailer'); // Email sender for password reset link
+// const crypto = require('crypto'); // For generating reset tokens
+const db = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -48,6 +51,13 @@ app.get('/', (req, res) => {
         res.status(500).render('error', { message: 'Internal Server Error' });
     }
 });
+app.get('/dashboard',(req,res) =>{
+    res.render('Dashboard')
+})
+
+app.get('/admin',(req,res) =>{
+    res.render('admin')
+})
 
 // Route for transaction page (dynamic pricing based on plan)
 app.get('/transaction', (req, res) => {
@@ -89,6 +99,46 @@ app.post('/login', (req, res, next) => {
         next(new Error('Login handler is missing in the userController.'));
     }
 });
+
+
+// Route to fetch all users for the admin dashboard
+
+app.post('/forgot-password', userController.forgotPassword);
+
+// app.get('/admin', userController.admin);
+
+// Forgot password route: renders forgot password page
+app.get('/forgot-password', (req, res) => {
+    res.render('forgot-password'); // Render forgot password page
+});
+// Admin route to fetch all users
+// Route to render the admin dashboard with all users
+app.get('/admin', (req, res) => {
+    // Query to fetch all users from the database
+    db.query('SELECT * FROM users', (err, results) => {
+      if (err) {
+        console.error('Error fetching users:', err);
+        return res.status(500).send('Server Error');
+      }
+  
+      const users = results; // List of all users
+  
+      // Calculate remaining days for each user
+      users.forEach(user => {
+        const subscriptionStartDate = new Date(user.subscription_start_date);
+        const currentDate = new Date();
+        const daysPassed = Math.floor((currentDate - subscriptionStartDate) / (1000 * 60 * 60 * 24)); // days passed since subscription
+        const remainingDays = user.plan_duration - daysPassed; // plan duration should be stored in the user table
+  
+        // Add remainingDays to each user object
+        user.remainingDays = remainingDays > 0 ? remainingDays : 0;
+      });
+  
+      // Make sure users is passed correctly to the template
+      res.render('admin', { users: users });
+    });
+  });
+
 
 // Logout route: logs the user out and redirects to the home page
 app.get('/logout', (req, res, next) => {

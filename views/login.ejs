@@ -14,146 +14,187 @@
         <button type="submit" class="auth-button">Login</button>
     </form>
     <p class="switch-text">Don't have an account? <a href="/signup">Sign up here</a></p>
+    <p class="forgot-password-text"><a href="/forgot-password">Forgot Password?</a></p>
 </div>
+
 <style>
     /* General Styling */
-body {
-    font-family: 'Poppins', sans-serif;
-    background: linear-gradient(to right, #1e3c72, #2a5298);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    margin: 0;
-    color: white;
-}
-
-/* Authentication Container */
-.auth-container {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    padding: 35px;
-    border-radius: 12px;
-    width: 380px;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
-    text-align: center;
-    animation: fadeIn 0.8s ease-in-out;
-}
-
-/* Auth Title */
-.auth-title {
-    font-size: 30px;
-    text-align: center;
-    margin-bottom: 20px;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #ffcc00;
-    animation: slideIn 0.6s ease-in-out;
-}
-
-/* Input Groups */
-.input-group {
-    margin-bottom: 18px;
-    text-align: left;
-}
-
-.input-group label {
-    display: block;
-    font-size: 14px;
-    margin-bottom: 6px;
-    font-weight: bold;
-}
-
-.input-group input {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 6px;
-    font-size: 15px;
-    transition: 0.3s;
-    background: rgba(255, 255, 255, 0.9);
-}
-
-.input-group input:focus {
-    outline: none;
-    background: white;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
-}
-
-/* Authentication Button */
-.auth-button {
-    background: #ff9900;
-    color: white;
-    font-size: 17px;
-    border: none;
-    padding: 12px;
-    width: 100%;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: 0.3s;
-    font-weight: bold;
-    text-transform: uppercase;
-}
-
-.auth-button:hover {
-    background: #e68a00;
-    transform: scale(1.05);
-}
-
-/* Switch Between Login & Signup */
-.switch-text {
-    margin-top: 18px;
-    font-size: 15px;
-}
-
-.switch-text a {
-    color: #ffcc00;
-    font-weight: bold;
-    text-decoration: none;
-    transition: 0.3s;
-}
-
-.switch-text a:hover {
-    text-decoration: underline;
-}
-
-/* Animations */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes slideIn {
-    from { transform: translateY(-15px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-/* RESPONSIVE DESIGN */
-@media (max-width: 500px) {
-    .auth-container {
-        width: 90%;
-        padding: 25px;
+    body {
+        font-family: 'Poppins', sans-serif;
+        background: linear-gradient(to right, #1e3c72, #2a5298);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        color: white;
     }
-    
+
+    /* Authentication Container */
+    .auth-container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        padding: 35px;
+        border-radius: 12px;
+        width: 380px;
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        animation: fadeIn 0.8s ease-in-out;
+        transition: all 0.3s ease-in-out;
+    }
+
+    /* Auth Title */
     .auth-title {
-        font-size: 26px;
+        font-size: 30px;
+        margin-bottom: 20px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #ffcc00;
+        animation: slideIn 0.6s ease-in-out;
+    }
+
+    /* Input Groups */
+    .input-group {
+        margin-bottom: 18px;
+        text-align: left;
+    }
+
+    .input-group label {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 6px;
+        font-weight: bold;
+        color: #ffcc00;
     }
 
     .input-group input {
-        font-size: 14px;
-        padding: 10px;
-    }
-    .navbar{
-        width: 90%;
-        margin-top: -190px;
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 6px;
+        font-size: 15px;
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        transition: 0.3s;
     }
 
-    .auth-button {
-        font-size: 15px;
-        padding: 10px;
+    .input-group input:focus {
+        outline: none;
+        background: white;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
     }
-}
+
+    /* Authentication Button */
+    .auth-button {
+        background: #ff9900;
+        color: white;
+        font-size: 17px;
+        border: none;
+        padding: 12px;
+        width: 100%;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: 0.3s;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .auth-button:hover {
+        background: #e68a00;
+        transform: scale(1.05);
+    }
+
+    /* Switch Between Login & Signup */
+    .switch-text {
+        margin-top: 18px;
+        font-size: 15px;
+    }
+
+    .switch-text a {
+        color: #ffcc00;
+        font-weight: bold;
+        text-decoration: none;
+        transition: 0.3s;
+    }
+
+    .switch-text a:hover {
+        text-decoration: underline;
+    }
+
+    /* Forgot Password Link */
+    .forgot-password-text {
+        margin-top: 10px;
+        font-size: 14px;
+    }
+
+    .forgot-password-text a {
+        color: #ffcc00;
+        font-weight: bold;
+        text-decoration: none;
+        transition: 0.3s;
+    }
+
+    .forgot-password-text a:hover {
+        text-decoration: underline;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+        from { transform: translateY(-15px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* RESPONSIVE DESIGN */
+    @media (max-width: 600px) {
+        .auth-container {
+            width: 90%;
+            padding: 25px;
+        }
+        
+        .auth-title {
+            font-size: 26px;
+        }
+
+        .input-group input {
+            font-size: 14px;
+            padding: 10px;
+        }
+
+        .auth-button {
+            font-size: 15px;
+            padding: 10px;
+        }
+    }
+
+    @media (max-width: 400px) {
+        .auth-container {
+            width: 90%;
+            padding: 20px;
+        }
+        
+        .auth-title {
+            font-size: 24px;
+        }
+
+        .auth-button {
+            font-size: 14px;
+            padding: 8px;
+        }
+
+        .forgot-password-text {
+            font-size: 12px;
+        }
+
+        .switch-text {
+            font-size: 13px;
+        }
+    }
 
 </style>

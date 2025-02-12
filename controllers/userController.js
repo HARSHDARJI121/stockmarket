@@ -72,5 +72,54 @@ const login = async (req, res) => {
     }
 };
 
+// Forgot Password logic
+const forgotPassword = async (req, res) => {
+    const { email, pass } = req.body;
 
-module.exports = { signup, login };
+    try {
+        // Step 1: Check if the email exists in the database
+        const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
+
+        if (rows.length === 0) {
+            return res.status(400).render('forgot-password', { error: 'Email not found' });
+        }
+
+        // Step 2: Hash the new password
+        const hashedPassword = await bcrypt.hash(pass, 10);
+
+        // Step 3: Update the password in the database
+        await db.execute('UPDATE users SET password = ? WHERE email = ?', [hashedPassword, email]);
+
+        // Step 4: Redirect the user to the login page with a success message
+        res.redirect('/login'); // Password updated, redirect to login page
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).render('error', { message: 'Server error during password reset' });
+    }
+}
+
+// const admin =  async (req, res) => {
+//     try {
+//         // Query the users table
+//         const [rows] = await db.query('SELECT * FROM users');
+        
+//         // Log the rows to see if we are getting data from the DB
+//         console.log(rows);
+
+//         // If data exists, render the admin page with the users data
+//         if (rows && rows.length > 0) {
+//             res.render('admin', { users: rows });
+//         } else {
+//             res.send('No users found');
+//         }
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).send('Internal Server Error');
+//     }
+// };
+
+
+//are tera table kha hai ye bata mysql ka 
+
+module.exports = { signup, login , forgotPassword };
