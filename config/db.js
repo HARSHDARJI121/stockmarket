@@ -8,4 +8,4 @@ const pool = mysql.createPool({
   database: 'stocktrade' // Your database name
 });
 
-module.exports = pool;
+module.exports = pool.promise(); // Using promise-based API for easy async/await handling
