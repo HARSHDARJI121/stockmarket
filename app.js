@@ -88,17 +88,29 @@ app.get('/admin',(req,res) =>{
 
 // Route for transaction page (dynamic pricing based on plan)
 app.get('/transaction', (req, res) => {
-    const plan = req.query.plan || 'standard';  // Default to 'standard' if no plan is passed
-    let amount = 0;
+    // Check if the user is logged in (session check)
+    if (!req.session.userName) {
+        return res.render('transaction');  // Redirect to login if the user is not logged in
+    }
 
+    // Retrieve user data from session
+    const userName = req.session.userName;
+
+    // Retrieve plan from query string (defaults to 'standard' if not provided)
+    const plan = req.query.plan || 'standard';
+
+    // Set amount based on the selected plan
+    let amount = 0;
     if (plan === "standard") {
         amount = 1251;
     } else if (plan === "premium") {
         amount = 3200;
     }
 
-    res.render('transaction', { plan, amount }); // Render the transaction page with plan details
+    // Render the transaction page with user name, selected plan, and amount
+    res.render('transaction', { userName, plan, amount });
 });
+
 
 // Route to render the login page
 app.get('/login', (req, res) => {
@@ -180,6 +192,92 @@ app.get('/logout', (req, res, next) => {
         res.redirect('/'); // If user is not logged in, just redirect to home
     }
 });
+
+// In-memory "database" for storing notifications
+let notifications = [];
+
+// Route to handle the user clicking the WhatsApp button
+app.post('/notify-admin', (req, res) => {
+    const { userName, plan } = req.body;
+    
+    if (userName && plan) {
+        // Save the notification to an array (could be a database in a real application)
+        notifications.push({
+            userName,
+            plan,
+            status: 'pending',
+        });
+        
+        // Respond with success
+        return res.status(200).json({ success: true });
+    }
+
+    // Invalid request
+    return res.status(400).json({ success: false, message: 'Invalid request' });
+});
+
+// Admin Page Route
+app.get('/admin', (req, res) => {
+    res.send(`
+        <html>
+            <head><title>Admin Panel</title></head>
+            <body>
+                <h1>Admin Notifications</h1>
+                <ul>
+                    ${notifications.map((notification, index) => `
+                        <li>
+                            ${notification.userName} (${notification.plan})
+                            <button onclick="acceptRequest(${index})">Accept</button>
+                            <button onclick="rejectRequest(${index})">Reject</button>
+                        </li>
+                    `).join('')}
+                </ul>
+                <script>
+                    function acceptRequest(index) {
+                        fetch('/accept-request', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ index, action: 'accept' })
+                        }).then(response => location.reload());
+                    }
+
+                    function rejectRequest(index) {
+                        fetch('/reject-request', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ index, action: 'reject' })
+                        }).then(response => location.reload());
+                    }
+                </script>
+            </body>
+        </html>
+    `);
+});
+
+// Accept Request Endpoint
+app.post('/accept-request', (req, res) => {
+    const { index, action } = req.body;
+    
+    if (notifications[index]) {
+        notifications[index].status = action;
+        return res.status(200).json({ success: true });
+    }
+    
+    return res.status(400).json({ success: false, message: 'Request not found' });
+});
+
+// Reject Request Endpoint
+app.post('/reject-request', (req, res) => {
+    const { index, action } = req.body;
+    
+    if (notifications[index]) {
+        notifications[index].status = action;
+        return res.status(200).json({ success: true });
+    }
+
+    return res.status(400).json({ success: false, message: 'Request not found' });
+});
+
 
 // Global Error Handler for unexpected errors
 app.use((err, req, res, next) => {

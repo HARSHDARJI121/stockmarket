@@ -174,8 +174,8 @@
     <!-- Main Transaction Container -->
     <div class="container">
         <h2>Complete Your Payment</h2>
-        <p class="details">Plan: <%= plan %></p>
-        <p class="details">Amount: ₹<%= amount %></p>
+        <p class="details">Plan: "<%= plan %>"</p>
+        <p class="details">Amount: "₹<%= amount %>"</p>
 
         <!-- QR Code Image -->
         <img src="/images/scanner.png" alt="Scan to Pay" class="qr-code">
@@ -201,22 +201,45 @@
     </div>
 
     <script>
-        // Dynamic message for WhatsApp button
-        const previewMessage = "Once the payment is done, click on the button below and send the message along with the payment screenshot.";
-        const messagePreviewElement = document.getElementById("messagePreview");
-
-        // Update the message preview
-        messagePreviewElement.textContent = previewMessage;
-
         // Define the phone number and prepare the dynamic message
         const phoneNumber = "+919320928936";  // Replace with actual phone number
-        const dynamicMessage = encodeURIComponent(previewMessage); // Dynamically encode the message
-
-        // Update WhatsApp button link dynamically
-        const whatsappButtonLink = document.getElementById("whatsappLink");
-        whatsappButtonLink.href = `https://wa.me/${phoneNumber}?text=${dynamicMessage}`;
-
+        const userName = "<%= userName %>";
+        const plan = "<%= plan %>";
+        const previewMessage = "Once the payment is done, click on the button below and send the message along with the payment screenshot.";
+    
+        // Function to notify the admin
+        function notifyAdmin() {
+            fetch('/notify-admin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userName, plan })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      console.log('Notification sent to admin');
+                  } else {
+                      console.log('Failed to notify admin');
+                  }
+              })
+              .catch(error => console.error('Error:', error));
+        }
+    
+        // Event listener for WhatsApp button click
+        const whatsappButton = document.querySelector('.whatsapp-btn');
+        whatsappButton.addEventListener('click', function(event) {
+            event.preventDefault(); // Prevent default link behavior
+            
+            // Notify the admin about the click
+            notifyAdmin();
+            
+            // Proceed to WhatsApp link
+            const dynamicMessage = encodeURIComponent(previewMessage);
+            window.location.href = `https://wa.me/${phoneNumber}?text=${dynamicMessage}`;
+        });
     </script>
+    
 
 </body>
 </html>

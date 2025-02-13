@@ -1,24 +1,123 @@
-<h2>All Users</h2>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - StockTrade</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .accept {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .reject {
+            background-color: #f44336;
+            color: white;
+        }
+        .header {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
 
-<% if (users && users.length > 0) { %> <!-- Ensure users is defined and not empty -->
-    <table border="1">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-            </tr>
-        </thead>
-        <tbody>
-            <% users.forEach(user => { %> 
+    <div class="header">
+        <h2>All Users</h2>
+    </div>
+
+    <% if (users && users.length > 0) { %> <!-- Ensure users is defined and not empty -->
+        <table>
+            <thead>
                 <tr>
-                    <td><%= user.id %></td>
-                    <td><%= user.name %></td>
-                    <td><%= user.email %></td>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Plan</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                 </tr>
-            <% }) %>
-        </tbody>
-    </table>
-<% } else { %>
-    <p>No users found</p>
-<% } %>
+            </thead>
+            <tbody>
+                <% users.forEach((user, index) => { %>
+                    <tr>
+                        <td><%= user.id %></td>
+                        <td><%= user.name %></td>
+                        <td><%= user.email %></td>
+                        <td><%= user.plan %></td>
+                        <td><%= user.status %></td>
+                        <td>
+                          <% if (user.status === 'pending') { %>
+                              <button class="accept" onclick="updateStatus(<%= index %>, 'accept')">Accept</button>
+                              <button class="reject" onclick="updateStatus(<%= index %>, 'reject')">Reject</button>
+                          <% } else { %>
+                              <button disabled class="<%= user.status === 'accepted' ? 'accept' : 'reject' %>">
+                                  <!-- Safe handling of user.status to avoid errors -->
+                                  <%= (user.status && user.status.charAt(0).toUpperCase() + user.status.slice(1)) || 'Unknown' %>
+                              </button>
+                          <% } %>
+                      </td>                      
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    <% } else { %>
+        <p>No users found</p>
+    <% } %>
+
+    <script>
+        // Function to handle accepting or rejecting a user request
+        function updateStatus(index, action) {
+            fetch('/update-user-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ index, action })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload the page to update the user status
+                    location.reload();
+                } else {
+                    alert('Failed to update user status');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating status');
+            });
+        }
+    </script>
+
+</body>
+</html>
