@@ -19,7 +19,6 @@ const signup = async (req, res) => {
         // Insert user into the database
         const [result] = await db.execute('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', [name, email, hashedPassword]);
 
-        // Now that the user is registered, we can log them in by saving their session
         // Find the user by email to store their data in the session
         const [newUserRows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
 
@@ -28,13 +27,12 @@ const signup = async (req, res) => {
             id: newUserRows[0].id,
             email: newUserRows[0].email,
             name: newUserRows[0].name,
-            // Add other user info to session as needed
         };
 
-        // Redirect to homepage or dashboard after successful signup
-        res.redirect('/');
+        // Redirect to homepage or login page after successful signup
+        res.redirect('/login');
     } catch (err) {
-        console.error(err);
+        console.error('Error during signup:', err);
         res.status(500).render('error', { message: 'Server error during signup' });
     }
 };
@@ -98,6 +96,7 @@ const forgotPassword = async (req, res) => {
         res.status(500).render('error', { message: 'Server error during password reset' });
     }
 }
+
 
 // const admin =  async (req, res) => {
 //     try {

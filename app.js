@@ -33,6 +33,33 @@ app.use((req, res, next) => {
     res.locals.user = req.session.user || null; // Makes `user` available in all views
     next();
 });
+  
+  // Routes
+  app.get('/admin', async (req, res) => {
+    try {
+        // Using async/await for promise-based query execution
+        const [results] = await db.query('SELECT * FROM users');
+        
+        const users = results; // List of all users
+        
+        // Calculate remaining days for each user
+        users.forEach(user => {
+            const subscriptionStartDate = new Date(user.subscription_start_date);
+            const currentDate = new Date();
+            const daysPassed = Math.floor((currentDate - subscriptionStartDate) / (1000 * 60 * 60 * 24)); // days passed since subscription
+            const remainingDays = user.plan_duration - daysPassed; // plan duration should be stored in the user table
+            
+            // Add remainingDays to each user object
+            user.remainingDays = remainingDays > 0 ? remainingDays : 0;
+        });
+
+        // Render the admin view with the users
+        res.render('admin', { users: users });
+    } catch (err) {
+        console.error('Error fetching users:', err);
+        res.status(500).send('Server Error');
+    }
+});
 
 // Route to render the homepage with dynamic images
 app.get('/', (req, res) => {
