@@ -121,4 +121,9 @@ const forgotPassword = async (req, res) => {
 
 //are tera table kha hai ye bata mysql ka 
 
+// POST route to save transaction
+
+
+//esko app.js me dal re
+
 module.exports = { signup, login , forgotPassword };

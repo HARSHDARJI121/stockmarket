@@ -61,30 +61,14 @@
                     <th>ID</th>
                     <th>Name</th>
                     <th>Email</th>
-                    <th>Plan</th>
-                    <th>Status</th>
-                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <% users.forEach((user, index) => { %>
+                <% users.forEach((user) => { %>
                     <tr>
                         <td><%= user.id %></td>
                         <td><%= user.name %></td>
                         <td><%= user.email %></td>
-                        <td><%= user.plan %></td>
-                        <td><%= user.status %></td>
-                        <td>
-                          <% if (user.status === 'pending') { %>
-                              <button class="accept" onclick="updateStatus(<%= index %>, 'accept')">Accept</button>
-                              <button class="reject" onclick="updateStatus(<%= index %>, 'reject')">Reject</button>
-                          <% } else { %>
-                              <button disabled class="<%= user.status === 'accepted' ? 'accept' : 'reject' %>">
-                                  <!-- Safe handling of user.status to avoid errors -->
-                                  <%= (user.status && user.status.charAt(0).toUpperCase() + user.status.slice(1)) || 'Unknown' %>
-                              </button>
-                          <% } %>
-                      </td>                      
                     </tr>
                 <% }) %>
             </tbody>
@@ -92,32 +76,6 @@
     <% } else { %>
         <p>No users found</p>
     <% } %>
-
-    <script>
-        // Function to handle accepting or rejecting a user request
-        function updateStatus(index, action) {
-            fetch('/update-user-status', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ index, action })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Reload the page to update the user status
-                    location.reload();
-                } else {
-                    alert('Failed to update user status');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error updating status');
-            });
-        }
-    </script>
 
 </body>
 </html>
