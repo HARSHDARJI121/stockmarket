@@ -1,9 +1,8 @@
-function isAuthenticated(req, res, next) {
-    if (req.session && req.session.user) {
-        return next(); // User is authenticated, proceed to the next middleware/route
+module.exports = function isAuthenticated(req, res, next) {
+    if (req.session.user) {
+      return next(); // Proceed if authenticated
     } else {
-        res.redirect('/login'); // Redirect to login if not authenticated
+      res.redirect('/login'); // Redirect to login if not authenticated
     }
-}
-
-module.exports = isAuthenticated;
+  };
+  

@@ -1,42 +1,34 @@
 const bcrypt = require('bcryptjs');
-const db = require('../config/db');
+const db = require('../config/db'); // Assuming db is configured to use MySQL (or any other DB you are using)
 
-// Signup logic
+// Signup logic (only requires name, email, password)
 const signup = async (req, res) => {
-    const { name, email, password } = req.body;
-
     try {
-        // Check if the user already exists
-        const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
-
-        if (rows.length > 0) {
-            return res.status(400).render('signup', { error: 'User already exists' });
+        const { name, email, password } = req.body; // Extract fields from the request
+  
+        // Validate required fields (name, email, password)
+        if (!name || !email || !password) {
+            return res.status(400).render('signup', { error: 'Name, email, and password are required' });
         }
-
-        // Hash the password
+  
+        // Hash the password before saving
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Insert user into the database
-        const [result] = await db.execute('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', [name, email, hashedPassword]);
-
-        // Find the user by email to store their data in the session
-        const [newUserRows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
-
-        // Save user info in session
-        req.session.user = {
-            id: newUserRows[0].id,
-            email: newUserRows[0].email,
-            name: newUserRows[0].name,
-        };
-
-        // Redirect to homepage or login page after successful signup
+  
+        // Insert new user record into the database (without 'plan' field)
+        const [result] = await db.execute(
+            'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
+            [name, email, hashedPassword]
+        );
+  
+        // Redirect to login page after successful signup
         res.redirect('/login');
-    } catch (err) {
-        console.error('Error during signup:', err);
-        res.status(500).render('error', { message: 'Server error during signup' });
+    } catch (error) {
+        console.error('Error during signup:', error);
+        res.status(500).render('signup', { error: 'Server Error' });
     }
 };
 
+// Login logic
 const login = async (req, res) => {
     const { email, password } = req.body;
 
@@ -59,7 +51,7 @@ const login = async (req, res) => {
         req.session.user = {
             id: rows[0].id,
             email: rows[0].email,
-            // Add any other user details you want to store in session
+            name: rows[0].name, // Ensure that 'name' exists in the session
         };
 
         // Redirect to homepage or user dashboard after successful login
@@ -95,35 +87,77 @@ const forgotPassword = async (req, res) => {
         console.error(err);
         res.status(500).render('error', { message: 'Server error during password reset' });
     }
-}
+};
 
+// User Dashboard logic (This assumes user is logged in)
+const getDashboard = async (req, res) => {
+    const userId = req.session.user ? req.session.user.id : null;
 
-// const admin =  async (req, res) => {
-//     try {
-//         // Query the users table
-//         const [rows] = await db.query('SELECT * FROM users');
-        
-//         // Log the rows to see if we are getting data from the DB
-//         console.log(rows);
+    if (!userId) {
+        return res.status(401).render('login', { error: 'Please login to access your dashboard' });
+    }
 
-//         // If data exists, render the admin page with the users data
-//         if (rows && rows.length > 0) {
-//             res.render('admin', { users: rows });
-//         } else {
-//             res.send('No users found');
-//         }
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).send('Internal Server Error');
-//     }
-// };
+    try {
+        // Fetch user info from the database
+        const [rows] = await db.execute('SELECT * FROM users WHERE id = ?', [userId]);
 
+        if (rows.length === 0) {
+            return res.status(404).render('error', { message: 'User not found' });
+        }
 
-//are tera table kha hai ye bata mysql ka 
+        const user = rows[0];
 
-// POST route to save transaction
+        // Render the dashboard with user data
+        res.render('dashboard', {
+            name: user.name,
+            email: user.email
+        });
+    } catch (err) {
+        console.error('Error fetching user data:', err);
+        return res.status(500).render('error', { message: 'Database error' });
+    }
+};
 
+// Logout logic
+const logout = (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).render('error', { message: 'Error during logout' });
+        }
+        // Redirect to login page after logout
+        res.redirect('/login');
+    });
+};
+const saveTransaction = async (req, res) => {
+    try {
+        const { email, name, plan, amount, status, user_id } = req.body; // Extract required fields
 
-//esko app.js me dal re
+        // Ensure all required fields are provided
+        if (!email || !name || !plan || !amount || !status || !user_id) {
+            return res.status(400).send('Missing required fields');
+        }
 
-module.exports = { signup, login , forgotPassword };
+        // Insert the transaction into the database
+        const transaction = await Transaction.create({
+            email,
+            name,
+            plan,
+            amount,
+            status,
+            user_id,  // Pass user_id here
+        });
+
+        // Return success response
+        res.status(201).json({
+            message: 'Transaction saved successfully!',
+            transactionId: transaction.id
+        });
+    } catch (error) {
+        console.error('Error saving transaction:', error);
+        res.status(500).send('Server error');
+    }
+};
+
+// Export the functions properly
+module.exports = { signup, login, forgotPassword, getDashboard, logout, saveTransaction };

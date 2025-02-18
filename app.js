@@ -6,6 +6,7 @@ const morgan = require('morgan'); // Logger for better debugging
 const { Sequelize, DataTypes } = require('sequelize'); // Sequelize for DB handling
 const userController = require('./controllers/userController'); // Import the user controller
 const isAuthenticated = require('./controllers/auth'); // Authentication check
+const cron = require('node-cron');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,38 +18,75 @@ const sequelize = new Sequelize('stocktrade', 'root', 'Harsh@5489', {
   logging: false,  // Optional: Enable to see SQL queries
 });
 
+sequelize.authenticate()
+  .then(() => {
+    console.log('Database connection successful!');
+  })
+  .catch((err) => {
+    console.error('Unable to connect to the database:', err);
+  });
+
+
 // Define the Transaction model
 const Transaction = sequelize.define('Transaction', {
+  id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+  },
   email: {
+      type: DataTypes.STRING,
+      allowNull: false
+  },
+  name: {
+      type: DataTypes.STRING,
+      allowNull: false
+  },
+  plan: {
+      type: DataTypes.STRING,
+      allowNull: false
+  },
+  amount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false
+  },
+  status: {
+      type: DataTypes.ENUM('pending', 'completed', 'failed'),
+      allowNull: false
+  }
+}, {
+  timestamps: true,
+  tableName: 'Transactions'
+});
+
+
+const User = sequelize.define('User', {
+  name: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  name: {
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,  // Ensures no duplicate emails
+  },
+  password: {
     type: DataTypes.STRING,
     allowNull: false,
   },
   plan: {
     type: DataTypes.STRING,
     allowNull: false,
-  },
-  amount: {
-    type: DataTypes.FLOAT,
-    allowNull: false,
-  },
-  status: {
-    type: DataTypes.STRING,
-    defaultValue: 'pending',
+    defaultValue: 'basic',  // Set default plan value
   },
 });
 
+
 // Sync the database (create table if it doesn't exist)
-sequelize.sync({ force: false })
-  .then(() => {
-    console.log('Database synced successfully.');
-  })
-  .catch((err) => {
-    console.error('Error syncing database:', err);
-  });
+sequelize.sync({ force: false }) // false will preserve existing data, true will drop and recreate tables
+  .then(() => console.log('Database synced'))
+  .catch(err => console.error('Error syncing database:', err));
+
 
 // Middleware setup
 app.use(morgan('dev')); // Logs incoming requests
@@ -93,8 +131,7 @@ app.get('/', (req, res) => {
 // Admin Page Route (Displays list of users and their subscription status)
 app.get('/admin', async (req, res) => {
   try {
-    const [results] = await sequelize.query('SELECT * FROM users');
-    const users = results;
+    const users = await sequelize.query('SELECT * FROM users', { type: sequelize.QueryTypes.SELECT });
 
     // Calculate remaining days for each user
     users.forEach(user => {
@@ -112,11 +149,19 @@ app.get('/admin', async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
+app.post('/signup', (req, res, next) => {
+  if (userController.signup) {
+    userController.signup(req, res, next);
+  } else {
+    next(new Error('Signup handler is missing in the userController.'));
+  }
+});
+
 
 // Transaction Page (Displays user-specific transaction data)
 app.get('/transaction', isAuthenticated, (req, res) => {
-  const userEmail = req.session.userEmail;  // Assuming you are storing the email in the session
-  const userName = req.session.userName;    // Assuming you are storing the username in the session
+  const userEmail = req.session.userEmail;
+  const userName = req.session.userName;
 
   const plan = req.query.plan || 'standard';
   let amount = 0;
@@ -140,6 +185,7 @@ app.get('/transaction', isAuthenticated, (req, res) => {
     amount: amount
   });
 });
+
 
 // Save Transaction Route (Handles saving the transaction in the database)
 app.post('/save-transaction', async (req, res) => {
@@ -172,21 +218,8 @@ app.get('/signup', (req, res) => {
 });
 
 // Handle POST requests for signup and login via userController
-app.post('/signup', (req, res, next) => {
-  if (userController.signup) {
-    userController.signup(req, res, next);
-  } else {
-    next(new Error('Signup handler is missing in the userController.'));
-  }
-});
-
-app.post('/login', (req, res, next) => {
-  if (userController.login) {
-    userController.login(req, res, next);
-  } else {
-    next(new Error('Login handler is missing in the userController.'));
-  }
-});
+app.post('/signup', userController.signup);
+app.post('/login', userController.login);
 
 // Forgot password route
 app.get('/forgot-password', (req, res) => {
@@ -206,6 +239,48 @@ app.get('/logout', (req, res, next) => {
     });
   } else {
     res.redirect('/');
+  }
+});
+
+// Dashboard route (fetching user data and subscription information)
+app.get('/dashboard', isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.session.userId; // Get user ID from session
+
+    // Use Sequelize to fetch the user based on the ID
+    const user = await sequelize.models.User.findOne({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+
+    const currentDate = new Date();
+    const plan = user.plan;
+    const startDate = new Date(user.subscription_start_date);
+    const endDate = new Date(user.premium_plan_end_date);
+
+    let remainingDays = 0;
+
+    // Logic to calculate remaining days for different plans
+    if (plan === '1251' || plan === '3200') {
+      remainingDays = Math.floor((endDate - currentDate) / (1000 * 60 * 60 * 24));
+    }
+
+    // If remaining days is less than 0, set it to 0
+    if (remainingDays < 0) {
+      remainingDays = 0;
+    }
+
+    // Render the dashboard view with user data
+    res.render('dashboard', { name: user.name, plan, remainingDays });
+
+  } catch (err) {
+    console.error('Error fetching user data:', err);
+    res.status(500).send("Database error");
   }
 });
 

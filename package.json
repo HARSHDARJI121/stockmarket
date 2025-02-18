@@ -21,7 +21,9 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "mysql2": "^3.12.0",
+    "node-cron": "^3.0.3",
     "nodemailer": "^6.10.0",
+    "pool": "^0.4.1",
     "sequelize": "^6.37.5",
     "sqlite3": "^5.1.7"
   }
