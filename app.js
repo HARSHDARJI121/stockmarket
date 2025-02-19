@@ -131,11 +131,15 @@ app.get('/', (req, res) => {
 // Admin Page Route (Displays list of users and their subscription status)
 app.get('/admin', async (req, res) => {
   try {
+    // Fetch users from the database
     const users = await sequelize.query('SELECT * FROM users', { type: sequelize.QueryTypes.SELECT });
+
+    // Fetch transactions from the database
+    const transactions = await sequelize.query('SELECT * FROM Transactions', { type: sequelize.QueryTypes.SELECT });
 
     // Calculate remaining days for each user
     users.forEach(user => {
-      const subscriptionStartDate = new Date(user.subscription_start_date);
+      const subscriptionStartDate = new Date(user.subscription_start_date); // Make sure subscription_start_date exists
       const currentDate = new Date();
       const daysPassed = Math.floor((currentDate - subscriptionStartDate) / (1000 * 60 * 60 * 24));
       const remainingDays = user.plan_duration - daysPassed;
@@ -143,12 +147,76 @@ app.get('/admin', async (req, res) => {
       user.remainingDays = remainingDays > 0 ? remainingDays : 0;
     });
 
-    res.render('admin', { users });
+    // Render the 'admin' template with both users and transactions data
+    res.render('admin', { users, transactions });
   } catch (err) {
-    console.error('Error fetching users:', err);
+    console.error('Error fetching users and transactions:', err);
     res.status(500).send('Server Error');
   }
 });
+// Accept the transaction (promote user to premium)
+app.post('/admin/accept-transaction/:id', async (req, res) => {
+  const transactionId = req.params.id;
+
+  try {
+    // Fetch the transaction to get the user associated with it
+    const transaction = await Transaction.findOne({ where: { id: transactionId } });
+
+    if (!transaction) {
+      return res.status(404).json({ success: false, message: 'Transaction not found' });
+    }
+
+    // Fetch the user associated with this transaction
+    const user = await User.findOne({ where: { id: transaction.user_id } });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Update the user's plan with the one from the transaction
+    await User.update(
+      { plan: transaction.plan },  // Set the user's plan to the one from the transaction
+      { where: { id: user.id } }
+    );
+
+    // Optionally, update the transaction's status to 'accepted'
+    await Transaction.update(
+      { status: 'accepted' },
+      { where: { id: transactionId } }
+    );
+
+    // Respond with a success message
+    res.json({ success: true, message: 'Profile updated successfully!' });
+  } catch (err) {
+    console.error('Error accepting transaction:', err);
+    res.status(500).json({ success: false, message: 'Error accepting transaction' });
+  }
+});
+
+
+// Reject the transaction (delete the record)
+app.post('/admin/reject-transaction/:id', async (req, res) => {
+  const transactionId = req.params.id;
+  
+  try {
+    // Find the transaction by ID
+    const transaction = await Transaction.findOne({ where: { id: transactionId } });
+
+    if (!transaction) {
+      return res.status(404).send('Transaction not found');
+    }
+
+    // Delete the transaction record
+    await Transaction.destroy({ where: { id: transactionId } });
+
+    res.json({ success: true, message: 'Transaction rejected and deleted' });
+  } catch (err) {
+    console.error('Error rejecting transaction:', err);
+    res.status(500).json({ success: false, message: 'Error rejecting transaction' });
+  }
+});
+
+
 app.post('/signup', (req, res, next) => {
   if (userController.signup) {
     userController.signup(req, res, next);
@@ -191,13 +259,18 @@ app.get('/transaction', isAuthenticated, (req, res) => {
 app.post('/save-transaction', async (req, res) => {
   const { user_email, user_name, plan, amount, status } = req.body;
 
+  // Provide default values if email or name is not provided
+  const email = user_email || 'default_email@example.com'; // Default email
+  const name = user_name || 'Default Name'; // Default name
+  const transactionStatus = status || 'pending'; // Default status if not provided
+
   try {
     const newTransaction = await Transaction.create({
-      email: user_email,  // Ensure the email is passed correctly
-      name: user_name,
-      plan: plan,
-      amount: amount,
-      status: status || 'pending',  // Default to 'pending' if no status provided
+      email: email,  // Store the provided email or default value
+      name: name,    // Store the provided name or default value
+      plan: plan,    // Plan should come from the request
+      amount: amount, // Amount should come from the request
+      status: transactionStatus, // Status will default to 'pending' if not provided
     });
 
     res.json({ success: true, transaction: newTransaction });
@@ -206,6 +279,7 @@ app.post('/save-transaction', async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to save transaction' });
   }
 });
+
 
 // Route to render the login page
 app.get('/login', (req, res) => {
@@ -243,46 +317,54 @@ app.get('/logout', (req, res, next) => {
 });
 
 // Dashboard route (fetching user data and subscription information)
-app.get('/dashboard', isAuthenticated, async (req, res) => {
-  try {
-    const userId = req.session.userId; // Get user ID from session
+app.get('/dashboard', async (req, res) => {
+  const { user_id } = req.body;  // Assuming you're passing the user_id in the body
 
-    // Use Sequelize to fetch the user based on the ID
-    const user = await sequelize.models.User.findOne({
-      where: {
-        id: userId,
-      },
+  // Validate user_id before using it
+  if (!user_id) {
+    return res.status(400).json({ success: false, message: 'User ID is required' });
+  }
+
+  try {
+    // Fetch the user from the database
+    const user = await User.findOne({
+      where: { id: user_id },
     });
 
     if (!user) {
-      return res.status(404).send("User not found");
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const currentDate = new Date();
-    const plan = user.plan;
-    const startDate = new Date(user.subscription_start_date);
-    const endDate = new Date(user.premium_plan_end_date);
-
-    let remainingDays = 0;
-
-    // Logic to calculate remaining days for different plans
-    if (plan === '1251' || plan === '3200') {
-      remainingDays = Math.floor((endDate - currentDate) / (1000 * 60 * 60 * 24));
-    }
-
-    // If remaining days is less than 0, set it to 0
-    if (remainingDays < 0) {
-      remainingDays = 0;
-    }
-
-    // Render the dashboard view with user data
-    res.render('dashboard', { name: user.name, plan, remainingDays });
-
-  } catch (err) {
-    console.error('Error fetching user data:', err);
-    res.status(500).send("Database error");
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch user data' });
   }
 });
+
+app.get('/dashboard/:id', async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ success: false, message: 'ID is required' });
+  }
+
+  try {
+    const user = await User.findOne({
+      where: { id: id },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch user data' });
+  }
+});
+
 
 // Global Error Handler for unexpected errors
 app.use((err, req, res, next) => {

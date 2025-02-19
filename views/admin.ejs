@@ -46,6 +46,9 @@
             font-size: 24px;
             margin-bottom: 20px;
         }
+        .transactions-table, .users-table {
+            margin-top: 40px;
+        }
     </style>
 </head>
 <body>
@@ -54,8 +57,8 @@
         <h2>All Users</h2>
     </div>
 
-    <% if (users && users.length > 0) { %> <!-- Ensure users is defined and not empty -->
-        <table>
+    <% if (users && users.length > 0) { %>
+        <table class="users-table">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -76,6 +79,88 @@
     <% } else { %>
         <p>No users found</p>
     <% } %>
+
+    <div class="header">
+        <h2>All Transactions</h2>
+    </div>
+
+    <% if (transactions && transactions.length > 0) { %>
+        <table class="transactions-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Email</th>
+                    <th>Name</th>
+                    <th>Plan</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Updated At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% transactions.forEach((transaction) => { %>
+                    <tr>
+                        <td><%= transaction.id %></td>
+                        <td><%= transaction.email %></td>
+                        <td><%= transaction.name %></td>
+                        <td><%= transaction.plan %></td>
+                        <td><%= transaction.amount %></td>
+                        <td><%= transaction.status %></td>
+                        <td><%= transaction.createdAt %></td>
+                        <td><%= transaction.updatedAt %></td>
+                        <td>
+                            <button onclick="acceptTransaction(<%= transaction.id %>)" class="accept">Accept</button>
+                            <button onclick="rejectTransaction(<%= transaction.id %>)" class="reject">Reject</button>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    <% } else { %>
+        <p>No transactions found</p>
+    <% } %>
+
+    <script>
+        // Accept Transaction function to send request to backend
+        function acceptTransaction(transactionId) {
+            fetch(`/admin/accept-transaction/${transactionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                location.reload();  // Reload the page to reflect changes
+            })
+            .catch(error => {
+                console.error('Error accepting transaction:', error);
+                alert('Error accepting transaction');
+            });
+        }
+
+        // Reject Transaction function to send request to backend
+        function rejectTransaction(transactionId) {
+            fetch(`/admin/reject-transaction/${transactionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                location.reload();  // Reload the page to reflect changes
+            })
+            .catch(error => {
+                console.error('Error rejecting transaction:', error);
+                alert('Error rejecting transaction');
+            });
+        }
+    </script>
 
 </body>
 </html>
