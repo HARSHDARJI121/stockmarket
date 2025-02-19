@@ -155,43 +155,32 @@ app.get('/admin', async (req, res) => {
   }
 });
 // Accept the transaction (promote user to premium)
-app.post('/admin/accept-transaction/:id', async (req, res) => {
-  const transactionId = req.params.id;
+// Example route to accept a transaction by user ID
+app.post('/admin/accept-transaction/:userId', async (req, res) => {
+  const userId = req.params.userId;
+  if (!userId) {
+      return res.status(400).json({ message: 'Invalid User ID' });
+  }
 
   try {
-    // Fetch the transaction to get the user associated with it
-    const transaction = await Transaction.findOne({ where: { id: transactionId } });
+      // Assuming you're updating a transaction by userId
+      const transaction = await Transaction.findOne({ where: { id: userId } });
 
-    if (!transaction) {
-      return res.status(404).json({ success: false, message: 'Transaction not found' });
-    }
+      if (!transaction) {
+          return res.status(404).json({ message: 'Transaction not found' });
+      }
 
-    // Fetch the user associated with this transaction
-    const user = await User.findOne({ where: { id: transaction.user_id } });
+      // Handle the update or action for the accepted transaction
+      transaction.status = 'accepted';
+      await transaction.save();
 
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    // Update the user's plan with the one from the transaction
-    await User.update(
-      { plan: transaction.plan },  // Set the user's plan to the one from the transaction
-      { where: { id: user.id } }
-    );
-
-    // Optionally, update the transaction's status to 'accepted'
-    await Transaction.update(
-      { status: 'accepted' },
-      { where: { id: transactionId } }
-    );
-
-    // Respond with a success message
-    res.json({ success: true, message: 'Profile updated successfully!' });
-  } catch (err) {
-    console.error('Error accepting transaction:', err);
-    res.status(500).json({ success: false, message: 'Error accepting transaction' });
+      return res.json({ message: 'Transaction accepted successfully' });
+  } catch (error) {
+      console.error('Error accepting transaction:', error);
+      return res.status(500).json({ message: 'Error accepting transaction' });
   }
 });
+
 
 
 // Reject the transaction (delete the record)

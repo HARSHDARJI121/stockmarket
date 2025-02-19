@@ -67,9 +67,9 @@
                 </tr>
             </thead>
             <tbody>
-                <% users.forEach((user) => { %>
+                <% users.forEach((user, index) => { %>
                     <tr>
-                        <td><%= user.id %></td>
+                        <td><%= index + 1 %></td> <!-- User ID starts from 1 and increments -->
                         <td><%= user.name %></td>
                         <td><%= user.email %></td>
                     </tr>
@@ -111,8 +111,9 @@
                         <td><%= transaction.createdAt %></td>
                         <td><%= transaction.updatedAt %></td>
                         <td>
-                            <button onclick="acceptTransaction(<%= transaction.id %>)" class="accept">Accept</button>
-                            <button onclick="rejectTransaction(<%= transaction.id %>)" class="reject">Reject</button>
+                            <button onclick="acceptTransaction('<%= transaction.id %>')" class="accept">Accept</button>
+                            <button onclick="rejectTransaction('<%= transaction.id %>')" class="reject">Reject</button>
+                            
                         </td>
                     </tr>
                 <% }) %>
@@ -121,11 +122,15 @@
     <% } else { %>
         <p>No transactions found</p>
     <% } %>
-
     <script>
         // Accept Transaction function to send request to backend
-        function acceptTransaction(transactionId) {
-            fetch(`/admin/accept-transaction/${transactionId}`, {
+        function acceptTransaction(userId) {
+            if (!userId) {
+                alert('Invalid User ID');
+                return;
+            }
+    
+            fetch(`/admin/accept-transaction/${userId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -141,10 +146,15 @@
                 alert('Error accepting transaction');
             });
         }
-
+    
         // Reject Transaction function to send request to backend
-        function rejectTransaction(transactionId) {
-            fetch(`/admin/reject-transaction/${transactionId}`, {
+        function rejectTransaction(userId) {
+            if (!userId) {
+                alert('Invalid User ID');
+                return;
+            }
+    
+            fetch(`/admin/reject-transaction/${userId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -161,6 +171,6 @@
             });
         }
     </script>
-
+    
 </body>
 </html>
