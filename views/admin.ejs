@@ -111,8 +111,9 @@
                         <td><%= transaction.createdAt %></td>
                         <td><%= transaction.updatedAt %></td>
                         <td>
-                            <button onclick="acceptTransaction(<%= transaction.id %>)" class="accept">Accept</button>
-                            <button onclick="rejectTransaction(<%= transaction.id %>)" class="reject">Reject</button>
+                            <button onclick="acceptTransaction('<%= transaction.id %>')" class="accept">Accept</button>
+                            <button onclick="rejectTransaction('<%= transaction.id %>')" class="reject">Reject</button>
+
                         </td>
                     </tr>
                 <% }) %>

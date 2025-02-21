@@ -7,6 +7,8 @@ const { Sequelize, DataTypes } = require('sequelize'); // Sequelize for DB handl
 const userController = require('./controllers/userController'); // Import the user controller
 const isAuthenticated = require('./controllers/auth'); // Authentication check
 const cron = require('node-cron');
+const AcceptedTransaction = require('./models/AcceptedTransaction');
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,39 +29,8 @@ sequelize.authenticate()
   });
 
 
-// Define the Transaction model
-const Transaction = sequelize.define('Transaction', {
-  id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-  },
-  email: {
-      type: DataTypes.STRING,
-      allowNull: false
-  },
-  name: {
-      type: DataTypes.STRING,
-      allowNull: false
-  },
-  plan: {
-      type: DataTypes.STRING,
-      allowNull: false
-  },
-  amount: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false
-  },
-  status: {
-      type: DataTypes.ENUM('pending', 'completed', 'failed'),
-      allowNull: false
-  }
-}, {
-  timestamps: true,
-  tableName: 'Transactions'
-});
 
-
+  
 const User = sequelize.define('User', {
   name: {
     type: DataTypes.STRING,
@@ -80,6 +51,48 @@ const User = sequelize.define('User', {
     defaultValue: 'basic',  // Set default plan value
   },
 });
+
+// Define the Transaction model
+const Transaction = sequelize.define('Transaction', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  plan: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  amount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+  },
+  status: {
+    type: DataTypes.ENUM('pending', 'completed', 'failed'),
+    allowNull: false,
+  },
+  transaction_date: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
+}, {
+  timestamps: true,
+  tableName: 'Transactions',
+});
+
+
+// Define the Transaction model
+
+
+
 
 
 // Sync the database (create table if it doesn't exist)
@@ -155,66 +168,7 @@ app.get('/admin', async (req, res) => {
   }
 });
 // Accept the transaction (promote user to premium)
-app.post('/admin/accept-transaction/:id', async (req, res) => {
-  const transactionId = req.params.id;
-
-  try {
-    // Fetch the transaction to get the user associated with it
-    const transaction = await Transaction.findOne({ where: { id: transactionId } });
-
-    if (!transaction) {
-      return res.status(404).json({ success: false, message: 'Transaction not found' });
-    }
-
-    // Fetch the user associated with this transaction
-    const user = await User.findOne({ where: { id: transaction.user_id } });
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    // Update the user's plan with the one from the transaction
-    await User.update(
-      { plan: transaction.plan },  // Set the user's plan to the one from the transaction
-      { where: { id: user.id } }
-    );
-
-    // Optionally, update the transaction's status to 'accepted'
-    await Transaction.update(
-      { status: 'accepted' },
-      { where: { id: transactionId } }
-    );
-
-    // Respond with a success message
-    res.json({ success: true, message: 'Profile updated successfully!' });
-  } catch (err) {
-    console.error('Error accepting transaction:', err);
-    res.status(500).json({ success: false, message: 'Error accepting transaction' });
-  }
-});
-
-
-// Reject the transaction (delete the record)
-app.post('/admin/reject-transaction/:id', async (req, res) => {
-  const transactionId = req.params.id;
-  
-  try {
-    // Find the transaction by ID
-    const transaction = await Transaction.findOne({ where: { id: transactionId } });
-
-    if (!transaction) {
-      return res.status(404).send('Transaction not found');
-    }
-
-    // Delete the transaction record
-    await Transaction.destroy({ where: { id: transactionId } });
-
-    res.json({ success: true, message: 'Transaction rejected and deleted' });
-  } catch (err) {
-    console.error('Error rejecting transaction:', err);
-    res.status(500).json({ success: false, message: 'Error rejecting transaction' });
-  }
-});
+// Example route to accept a transaction by user ID
 
 
 app.post('/signup', (req, res, next) => {
@@ -254,31 +208,94 @@ app.get('/transaction', isAuthenticated, (req, res) => {
   });
 });
 
-
-// Save Transaction Route (Handles saving the transaction in the database)
-app.post('/save-transaction', async (req, res) => {
-  const { user_email, user_name, plan, amount, status } = req.body;
-
-  // Provide default values if email or name is not provided
-  const email = user_email || 'default_email@example.com'; // Default email
-  const name = user_name || 'Default Name'; // Default name
-  const transactionStatus = status || 'pending'; // Default status if not provided
-
+app.post('/admin/accept-transaction/:id', async (req, res) => {
   try {
-    const newTransaction = await Transaction.create({
-      email: email,  // Store the provided email or default value
-      name: name,    // Store the provided name or default value
-      plan: plan,    // Plan should come from the request
-      amount: amount, // Amount should come from the request
-      status: transactionStatus, // Status will default to 'pending' if not provided
-    });
+      const transactionId = req.params.id;  // Get the transaction ID from the URL
 
-    res.json({ success: true, transaction: newTransaction });
+      // Find the transaction in the Transactions table using the provided transactionId
+      const transaction = await Transaction.findByPk(transactionId);
+
+      // If no transaction is found, send a 404 response
+      if (!transaction) {
+          return res.status(404).json({ message: 'Transaction not found' });
+      }
+
+      // Update the status of the transaction to 'accepted'
+      transaction.status = 'accepted';
+      await transaction.save();  // Save the updated status in the Transactions table
+
+      // Create a new record in the AcceptedTransactions table with the transaction details
+      await AcceptedTransaction.create({
+          email: transaction.email,
+          name: transaction.name,
+          plan: transaction.plan,
+          amount: transaction.amount,
+          status: 'accepted',  // We use 'accepted' because it's the final status
+          transaction_date: new Date(),  // Current timestamp for the accepted transaction
+      });
+
+      // Send a success response back to the client
+      res.json({ message: 'Transaction accepted and saved to AcceptedTransactions' });
   } catch (error) {
-    console.error('Error saving transaction:', error);
-    res.status(500).json({ success: false, message: 'Failed to save transaction' });
+      // Log any errors and return a 500 status code with an error message
+      console.error('Error accepting transaction:', error);
+      res.status(500).json({ message: 'Error accepting transaction' });
   }
 });
+
+
+// Reject transaction route
+app.post('/admin/reject-transaction/:id', async (req, res) => {
+  try {
+      const transactionId = req.params.id;
+
+      // Find the transaction that needs to be rejected
+      const transaction = await Transaction.findByPk(transactionId);
+
+      if (!transaction) {
+          return res.status(404).json({ message: 'Transaction not found' });
+      }
+
+      // Delete the rejected transaction from Transactions table
+      await transaction.destroy();
+
+      res.json({ message: 'Transaction rejected and deleted from Transactions' });
+  } catch (error) {
+      console.error('Error rejecting transaction:', error);
+      res.status(500).json({ message: 'Error rejecting transaction' });
+  }
+});
+
+
+// Route to save transaction in the database
+app.post('/save-transaction', async (req, res) => {
+  try {
+      const { user_email, user_name, plan, amount, status, userId, transaction_date } = req.body;
+
+      // Check if all necessary data is provided
+      if (!user_email || !user_name || !plan || !amount || !status || !userId || !transaction_date) {
+          return res.status(400).json({ success: false, message: 'Missing required fields.' });
+      }
+
+      // Create a new transaction record in the database
+      const transaction = await Transaction.create({
+          email: user_email,
+          name: user_name,
+          plan: plan,
+          amount: amount,
+          status: status,
+          transaction_date: transaction_date, // Save the transaction date
+      });
+
+      // Return success response
+      return res.status(200).json({ success: true, transaction: transaction });
+  } catch (error) {
+      console.error('Error saving transaction:', error);
+      return res.status(500).json({ success: false, message: 'Error saving transaction.' });
+  }
+});
+
+
 
 
 // Route to render the login page
@@ -316,54 +333,6 @@ app.get('/logout', (req, res, next) => {
   }
 });
 
-// Dashboard route (fetching user data and subscription information)
-app.get('/dashboard', async (req, res) => {
-  const { user_id } = req.body;  // Assuming you're passing the user_id in the body
-
-  // Validate user_id before using it
-  if (!user_id) {
-    return res.status(400).json({ success: false, message: 'User ID is required' });
-  }
-
-  try {
-    // Fetch the user from the database
-    const user = await User.findOne({
-      where: { id: user_id },
-    });
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    res.json({ success: true, user });
-  } catch (error) {
-    console.error('Error fetching user data:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch user data' });
-  }
-});
-
-app.get('/dashboard/:id', async (req, res) => {
-  const { id } = req.params;
-
-  if (!id) {
-    return res.status(400).json({ success: false, message: 'ID is required' });
-  }
-
-  try {
-    const user = await User.findOne({
-      where: { id: id },
-    });
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    res.json({ success: true, user });
-  } catch (error) {
-    console.error('Error fetching user data:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch user data' });
-  }
-});
 
 
 // Global Error Handler for unexpected errors
