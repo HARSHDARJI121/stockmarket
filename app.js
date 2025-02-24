@@ -7,7 +7,7 @@ const { Sequelize, DataTypes } = require('sequelize'); // Sequelize for DB handl
 const userController = require('./controllers/userController'); // Import the user controller
 const isAuthenticated = require('./controllers/auth'); // Authentication check
 const cron = require('node-cron');
-const AcceptedTransaction = require('./models/AcceptedTransaction');
+const AcceptedTransaction = require('./models/acceptedTransaction');
 
 
 const app = express();
@@ -207,32 +207,69 @@ app.get('/transaction', isAuthenticated, (req, res) => {
     amount: amount
   });
 });
+const standard = "standard";
+const premium = "premium";
 
 app.post('/admin/accept-transaction/:id', async (req, res) => {
   try {
       const transactionId = req.params.id;  // Get the transaction ID from the URL
+      console.log('Transaction ID:', transactionId);
 
       // Find the transaction in the Transactions table using the provided transactionId
       const transaction = await Transaction.findByPk(transactionId);
+      
+      console.log('Transaction:', transaction);
 
       // If no transaction is found, send a 404 response
       if (!transaction) {
+          console.log('Transaction not found for ID:', transactionId);
           return res.status(404).json({ message: 'Transaction not found' });
       }
 
       // Update the status of the transaction to 'accepted'
       transaction.status = 'accepted';
-      await transaction.save();  // Save the updated status in the Transactions table
+      await transaction.save();
+      console.log('Updated Transaction Status to "accepted":', transaction.status);
 
-      // Create a new record in the AcceptedTransactions table with the transaction details
+      // Set default start_date and end_date
+      const startDate = new Date(); // Current date for start_date
+      let endDate;
+      let plan;
+
+      // Determine the plan and set end_date based on the amount
+      if (transaction.plan === standard) {
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 30);
+          plan = 'standard';
+      } else if (transaction.plan === premium) {
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 90);
+          plan = 'premium';
+      } else {
+          plan = 'unknown';
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 30);  // Default to 30 days if no plan
+          console.log('Default Plan: unknown, Default End Date:', endDate);
+      }
+
+      // Log values
+      console.log('Plan:', plan);
+      console.log('Start Date:', startDate);
+      console.log('End Date:', endDate);
+
+      // Create a new record in the AcceptedTransactions table
       await AcceptedTransaction.create({
           email: transaction.email,
           name: transaction.name,
-          plan: transaction.plan,
           amount: transaction.amount,
-          status: 'accepted',  // We use 'accepted' because it's the final status
-          transaction_date: new Date(),  // Current timestamp for the accepted transaction
+          plan: plan,
+          start_date: endDate,  // Ensure start_date is included here
+          end_date: endDate,      // Ensure end_date is included
+          status: 'accepted',     // Status is 'accepted'
+          transaction_date: new Date(),  // Current timestamp
       });
+
+      console.log('Transaction successfully saved to AcceptedTransactions');
 
       // Send a success response back to the client
       res.json({ message: 'Transaction accepted and saved to AcceptedTransactions' });
@@ -242,29 +279,40 @@ app.post('/admin/accept-transaction/:id', async (req, res) => {
       res.status(500).json({ message: 'Error accepting transaction' });
   }
 });
-
-
-// Reject transaction route
 app.post('/admin/reject-transaction/:id', async (req, res) => {
+  const transactionId = req.params.id;
+  
   try {
-      const transactionId = req.params.id;
+    // Find the transaction by ID
+    const transaction = await Transaction.findOne({ where: { id: transactionId } });
 
-      // Find the transaction that needs to be rejected
-      const transaction = await Transaction.findByPk(transactionId);
+    if (!transaction) {
+      return res.status(404).send('Transaction not found');
+    }
 
-      if (!transaction) {
-          return res.status(404).json({ message: 'Transaction not found' });
-      }
+    // Delete the transaction record
+    await Transaction.destroy({ where: { id: transactionId } });
 
-      // Delete the rejected transaction from Transactions table
-      await transaction.destroy();
-
-      res.json({ message: 'Transaction rejected and deleted from Transactions' });
-  } catch (error) {
-      console.error('Error rejecting transaction:', error);
-      res.status(500).json({ message: 'Error rejecting transaction' });
+    res.json({ success: true, message: 'Transaction rejected and deleted' });
+  } catch (err) {
+    console.error('Error rejecting transaction:', err);
+    res.status(500).json({ success: false, message: 'Error rejecting transaction' });
   }
 });
+
+app.get('/dashboard', async (req, res) => {
+  try {
+    // Fetch all records from the AcceptedTransactions table
+    const transactions = await AcceptedTransaction.findAll();
+
+    // Pass the data to the EJS template
+    res.render('dashboard', { transactions });
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    res.status(500).send('Error fetching transactions');
+  }
+});
+
 
 
 // Route to save transaction in the database
