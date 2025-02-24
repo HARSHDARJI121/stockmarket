@@ -3,103 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
     <title>Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/progressbar.js"></script> <!-- ProgressBar.js -->
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
         }
+
         .container {
-            width: 80%;
-            margin: 0 auto;
-            padding-top: 30px;
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
+
         h1 {
-            text-align: center;
+            color: #2d3e50;
         }
-        table {
+
+        h2 {
+            font-size: 1.8rem;
+            color: #3a4e6e;
+            margin-bottom: 20px;
+        }
+
+        .transaction-info {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .transaction-card {
+            background-color: #e8f0fe;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .transaction-card h3 {
+            color: #5d79a9;
+            margin-bottom: 10px;
+        }
+
+        .transaction-card p {
+            font-size: 1rem;
+            color: #5d6e7e;
+            margin-bottom: 10px;
+        }
+
+        .progress-container {
             width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
+            height: 50px;
+            background-color: #78a7ff;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-top: 20px;
+            position: relative;
         }
-        table th, table td {
-            padding: 10px;
-            text-align: center;
-            border: 1px solid #ddd;
+
+        .progress-bar {
+            color: black;
+            border-radius: 50%;
+            height: 100%;
+            background-color: #f5a623; /* Initial color */
+            width: 0;
+            border-radius: 20px;
+            transition: width 0.5s ease, background-color 0.5s ease;
         }
-        .progress-circle {
-            width: 100px;
-            height: 100px;
-            margin: 0 auto;
+
+        .progress-bar.green {
+            background-color: #4caf50; /* Green color */
         }
+
+        .progress-text {
+            color: black;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgb(0, 0, 0);
+            font-weight: bold;
+        }
+
+        .status {
+            font-size: 1rem;
+            color: #333;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .transaction-info {
+                gap: 10px;
+            }
+
+            .transaction-card {
+                padding: 15px;
+            }
+        }
+
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Accepted Transactions</h1>
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Plan</th>
-                    <th>Amount</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
-                    <th>Days Left</th>
-                </tr>
-            </thead>
-            <tbody>
-                <% transactions.forEach(function(transaction) { %>
-                    <tr>
-                        <td><%= transaction.name %></td>
-                        <td><%= transaction.email %></td>
-                        <td><%= transaction.plan %></td>
-                        <td><%= transaction.amount %></td>
-                        <td><%= new Date(transaction.start_date).toLocaleDateString() %></td>
-                        <td><%= new Date(transaction.end_date).toLocaleDateString() %></td>
-                        <td>
-                            <div class="progress-circle" id="circle<%= transaction.id %>"></div>
-                            <script>
-                                // Get the start and end date
-                                const startDate = new Date("<%= transaction.start_date %>");
-                                const endDate = new Date("<%= transaction.end_date %>");
-                                const currentDate = new Date();
-                                const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-                                const remainingDays = Math.ceil((endDate - currentDate) / (1000 * 60 * 60 * 24));
+        <h1>Welcome, <%= user.name %></h1>
+        <p>Email: <%= user.email %></p>
+        
+        <div class="transaction-info">
+            <h2>Your Accepted Transactions</h2>
+            <% if (transactions.length > 0) { %>
+                <% transactions.forEach(transaction => { %>
+                    <div class="transaction-card">
+                        <h3>Plan: <%= transaction.plan %></h3>
+                        <p>Amount: &#8377;<%= transaction.amount %></p>
+                        <p>Start Date: <%= new Date(transaction.start_date).toLocaleDateString() %></p>
+                        <p>End Date: <%= new Date(transaction.end_date).toLocaleDateString() %></p>
+                        
+                        <!-- Progress Bar -->
+                        <div class="progress-container">
+                            <% 
+                                let startDate = new Date(transaction.start_date);
+                                let endDate = new Date(transaction.end_date);
+                                let totalDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)); // Total days
+                                
+                                // Handle invalid dates
+                                if (isNaN(startDate) || isNaN(endDate)) {
+                                    totalDays = 0;
+                                }
 
-                                // Determine progress value
-                                const progressValue = (remainingDays / totalDays) * 100;
+                                let currentDate = new Date();
+                                let daysPassed = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24)); // Days passed
 
-                                // Progress bar logic
-                                const bar = new ProgressBar.Circle('#circle<%= transaction.id %>', {
-                                    color: '#3498db',
-                                    strokeWidth: 8,
-                                    trailWidth: 8,
-                                    duration: 1400,
-                                    easing: 'easeInOut',
-                                    from: { color: '#ff0000', width: 8 },
-                                    to: { color: '#00ff00', width: 8 },
-                                    text: {
-                                        value: `${remainingDays}/${totalDays}`,
-                                        style: {
-                                            color: '#333',
-                                            fontSize: '16px',
-                                            fontWeight: 'bold',
-                                        },
-                                    },
-                                    step: (state, circle) => {
-                                        circle.setText(`${Math.max(remainingDays, 0)}/${totalDays}`);
-                                    }
-                                });
+                                // Ensure that days passed doesn't exceed totalDays
+                                if (daysPassed > totalDays) {
+                                    daysPassed = totalDays;
+                                }
 
-                                bar.animate(progressValue / 100); // 0 to 1 for progress bar
-                            </script>
-                        </td>
-                    </tr>
-                <% }); %>
-            </tbody>
-        </table>
+                                let progressPercentage = 0;
+                                if (totalDays > 0) {
+                                    progressPercentage = Math.min(100, (daysPassed / totalDays) * 100); // Progress percentage (ensuring it's between 0 and 100)
+                                }
+                            %>
+                            <div class="progress-bar <%= progressPercentage >= 70 ? 'green' : '' %>" style="width: '<%= progressPercentage %>%"></div>
+                            <div class="progress-text"><%= daysPassed %> / <%= totalDays %> Days</div>
+                        </div>
+                        </div>
+
+                        <div class="status">Status: <%= transaction.status %></div>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <p>You have no accepted transactions yet.</p>
+            <% } %>
+        </div>
     </div>
 </body>
 </html>

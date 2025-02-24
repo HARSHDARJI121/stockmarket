@@ -1,25 +1,29 @@
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const db = require('../config/db'); // Assuming db is configured to use MySQL (or any other DB you are using)
+
+// Secret key for signing the JWT
+const JWT_SECRET = 'yourSecretKey'; // Store this securely (e.g., in an environment variable)
 
 // Signup logic (only requires name, email, password)
 const signup = async (req, res) => {
     try {
         const { name, email, password } = req.body; // Extract fields from the request
-  
+
         // Validate required fields (name, email, password)
         if (!name || !email || !password) {
             return res.status(400).render('signup', { error: 'Name, email, and password are required' });
         }
-  
+
         // Hash the password before saving
         const hashedPassword = await bcrypt.hash(password, 10);
-  
+
         // Insert new user record into the database (without 'plan' field)
         const [result] = await db.execute(
             'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
             [name, email, hashedPassword]
         );
-  
+
         // Redirect to login page after successful signup
         res.redirect('/login');
     } catch (error) {
@@ -28,7 +32,7 @@ const signup = async (req, res) => {
     }
 };
 
-// Login logic
+// Login logic with JWT token
 const login = async (req, res) => {
     const { email, password } = req.body;
 
@@ -47,20 +51,21 @@ const login = async (req, res) => {
             return res.status(400).render('login', { error: 'Incorrect password' });
         }
 
-        // Save user info in the session after successful login
+        // Store user data in session
         req.session.user = {
             id: rows[0].id,
             email: rows[0].email,
-            name: rows[0].name, // Ensure that 'name' exists in the session
+            name: rows[0].name,
         };
 
-        // Redirect to homepage or user dashboard after successful login
+        // Redirect to dashboard or home page
         res.redirect('/');
     } catch (err) {
         console.error(err);
         res.status(500).render('error', { message: 'Server error during login' });
     }
 };
+
 
 // Forgot Password logic
 const forgotPassword = async (req, res) => {
@@ -89,9 +94,27 @@ const forgotPassword = async (req, res) => {
     }
 };
 
-// User Dashboard logic (This assumes user is logged in)
+// Middleware to verify JWT token
+const verifyToken = (req, res, next) => {
+    const token = req.headers['authorization']?.split(' ')[1]; // Expecting token in 'Authorization: Bearer <token>'
+
+    if (!token) {
+        return res.status(403).json({ error: 'No token provided' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        req.user = decoded; // Add decoded user information to the request object
+        next(); // Proceed to the next middleware/route handler
+    });
+};
+
+// User Dashboard logic (This assumes user is logged in and token is verified)
 const getDashboard = async (req, res) => {
-    const userId = req.session.user ? req.session.user.id : null;
+    const userId = req.user ? req.user.id : null; // The user info is now in req.user after verifying the token
 
     if (!userId) {
         return res.status(401).render('login', { error: 'Please login to access your dashboard' });
@@ -118,17 +141,13 @@ const getDashboard = async (req, res) => {
     }
 };
 
-// Logout logic
+// Logout logic (Optional since JWT is stateless, but you might want to handle token invalidation)
 const logout = (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).render('error', { message: 'Error during logout' });
-        }
-        // Redirect to login page after logout
-        res.redirect('/login');
-    });
+    // Since JWT is stateless, no session to destroy, just inform the client to remove the token
+    res.json({ message: 'Logged out successfully' });
 };
+
+// Save Transaction logic (assuming you're storing transaction information)
 const saveTransaction = async (req, res) => {
     try {
         const { email, name, plan, amount, status, user_id } = req.body; // Extract required fields
@@ -160,4 +179,4 @@ const saveTransaction = async (req, res) => {
 };
 
 // Export the functions properly
-module.exports = { signup, login, forgotPassword, getDashboard, logout, saveTransaction };
+module.exports = { signup, login, forgotPassword, getDashboard, logout, saveTransaction, verifyToken };

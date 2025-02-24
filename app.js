@@ -8,6 +8,7 @@ const userController = require('./controllers/userController'); // Import the us
 const isAuthenticated = require('./controllers/auth'); // Authentication check
 const cron = require('node-cron');
 const AcceptedTransaction = require('./models/acceptedTransaction');
+const db = require('./config/db');  
 
 
 const app = express();
@@ -232,16 +233,30 @@ app.post('/admin/accept-transaction/:id', async (req, res) => {
       console.log('Updated Transaction Status to "accepted":', transaction.status);
 
       // Set default start_date and end_date
-      const startDate = new Date(); // Current date for start_date
+      let startDate = new Date(); // Current date for start_date
       let endDate;
       let plan;
 
-      // Determine the plan and set end_date based on the amount
-      if (transaction.plan === standard) {
+      // Check if the amount is 1251
+      if (transaction.amount === 1251) {
+          startDate = new Date('2025-02-24');  // Set start date as 24th Feb 2025
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 30);  // Set end date to 30 days from start date
+          plan = 'standard';  // You can set the plan based on the business logic
+      } 
+      // Check if the amount is 3200
+      else if (transaction.amount === 3200) {
+          startDate = new Date();  // Set to current date
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 90);  // Set end date to 90 days from start date
+          plan = 'premium';  // You can set the plan based on the business logic
+      } 
+      // Handle other cases with default plans
+      else if (transaction.plan === 'standard') {
           endDate = new Date(startDate);
           endDate.setDate(startDate.getDate() + 30);
           plan = 'standard';
-      } else if (transaction.plan === premium) {
+      } else if (transaction.plan === 'premium') {
           endDate = new Date(startDate);
           endDate.setDate(startDate.getDate() + 90);
           plan = 'premium';
@@ -263,7 +278,7 @@ app.post('/admin/accept-transaction/:id', async (req, res) => {
           name: transaction.name,
           amount: transaction.amount,
           plan: plan,
-          start_date: endDate,  // Ensure start_date is included here
+          start_date: startDate,  // Ensure start_date is included here
           end_date: endDate,      // Ensure end_date is included
           status: 'accepted',     // Status is 'accepted'
           transaction_date: new Date(),  // Current timestamp
@@ -271,14 +286,24 @@ app.post('/admin/accept-transaction/:id', async (req, res) => {
 
       console.log('Transaction successfully saved to AcceptedTransactions');
 
-      // Send a success response back to the client
-      res.json({ message: 'Transaction accepted and saved to AcceptedTransactions' });
+      // Now calculate the days left for the admin to view
+      const currentDate = new Date();
+      const daysLeft = Math.ceil((endDate - currentDate) / (1000 * 60 * 60 * 24)); // Convert milliseconds to days
+
+      console.log(`Days Left for Plan: ${daysLeft}`);
+
+      // Send a success response back to the client with the calculated days left
+      res.json({
+          message: 'Transaction accepted and saved to AcceptedTransactions',
+          daysLeft: daysLeft  // Return days left so the admin can see it
+      });
   } catch (error) {
       // Log any errors and return a 500 status code with an error message
       console.error('Error accepting transaction:', error);
       res.status(500).json({ message: 'Error accepting transaction' });
   }
 });
+
 app.post('/admin/reject-transaction/:id', async (req, res) => {
   const transactionId = req.params.id;
   
@@ -300,16 +325,29 @@ app.post('/admin/reject-transaction/:id', async (req, res) => {
   }
 });
 
+// Dashboard Route
 app.get('/dashboard', async (req, res) => {
-  try {
-    // Fetch all records from the AcceptedTransactions table
-    const transactions = await AcceptedTransaction.findAll();
+  if (!req.session.user) {
+      return res.redirect('/login');  // Redirect if the user is not logged in
+  }
 
-    // Pass the data to the EJS template
-    res.render('dashboard', { transactions });
-  } catch (error) {
-    console.error('Error fetching transactions:', error);
-    res.status(500).send('Error fetching transactions');
+  try {
+      // Ensure you are using the correct table 'AcceptedTransactions'
+      const [rows] = await db.execute(
+          'SELECT * FROM AcceptedTransactions WHERE email = ?',
+          [req.session.user.email]  // Use the logged-in user's email to fetch their transactions
+      );
+
+      // Check if the user has any accepted transactions
+      if (rows.length === 0) {
+          console.log('No transactions found for user:', req.session.user.email);
+      }
+
+      // Render dashboard.ejs and pass the user's data and transactions
+      res.render('dashboard', { user: req.session.user, transactions: rows });
+  } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      res.status(500).render('error', { message: 'Error fetching dashboard data' });
   }
 });
 
