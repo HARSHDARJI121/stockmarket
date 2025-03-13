@@ -9,15 +9,17 @@ const isAuthenticated = require('./controllers/auth'); // Authentication check
 const cron = require('node-cron');
 const AcceptedTransaction = require('./models/acceptedTransaction');
 const db = require('./config/db');  
+require('dotenv').config();
 
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = 4000;
 
 // Configure Sequelize for MySQL connection
-const sequelize = new Sequelize('stocktrade', 'root', 'Harsh@5489', {
-  host: 'localhost',
+const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
+  host: process.env.DB_HOST,
   dialect: 'mysql',
+  port: process.env.DB_PORT,
   logging: false,  // Optional: Enable to see SQL queries
 });
 
