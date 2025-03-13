@@ -152,14 +152,14 @@
     }
 
     /* RESPONSIVE DESIGN */
-    @media (max-width: 600px) {
+    @media (max-width: 768px) {
         .auth-container {
-            width: 90%;
+            width: 80%;
             padding: 25px;
         }
-        
+
         .auth-title {
-            font-size: 26px;
+            font-size: 28px;
         }
 
         .input-group input {
@@ -168,19 +168,61 @@
         }
 
         .auth-button {
+            font-size: 16px;
+            padding: 10px;
+        }
+
+        .switch-text {
+            font-size: 14px;
+        }
+
+        .forgot-password-text {
+            font-size: 13px;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .auth-container {
+            width: 90%;
+            padding: 20px;
+        }
+
+        .auth-title {
+            font-size: 26px;
+        }
+
+        .input-group input {
+            font-size: 13px;
+            padding: 8px;
+        }
+
+        .auth-button {
             font-size: 15px;
             padding: 10px;
+        }
+
+        .switch-text {
+            font-size: 13px;
+        }
+
+        .forgot-password-text {
+            font-size: 12px;
         }
     }
 
     @media (max-width: 400px) {
         .auth-container {
             width: 90%;
-            padding: 20px;
+            padding: 15px;
         }
-        
+
         .auth-title {
-            font-size: 24px;
+            font-size: 22px;
+        }
+
+        .input-group input {
+            font-size: 12px;
+            padding: 6px;
         }
 
         .auth-button {
@@ -188,13 +230,12 @@
             padding: 8px;
         }
 
-        .forgot-password-text {
+        .switch-text {
             font-size: 12px;
         }
 
-        .switch-text {
-            font-size: 13px;
+        .forgot-password-text {
+            font-size: 10px;
         }
     }
-
 </style>

@@ -311,6 +311,9 @@ body {
     .about-section p {
         font-size: 16px;
     }
+    .navbar{
+            width: 88%;
+    }
 }
 
 /* Contact Section */

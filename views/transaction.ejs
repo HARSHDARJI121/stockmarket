@@ -114,7 +114,7 @@
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
-                max-width: 100%;
+                max-width: 90%;
             }
 
             .qr-code {
@@ -211,6 +211,24 @@
     
         // Send transaction data to the server when WhatsApp button is clicked
         document.querySelector('.whatsapp-btn').addEventListener('click', function() {
+
+    //         const startDate = new Date();
+    //         let endDate = null;
+    //         if (amount === 1251) {
+    //     // For plan 1251, set the end date to 30 days from the start date
+    //     endDate = new Date(startDate);
+    //     endDate.setDate(startDate.getDate() + 30);
+    // } else if (amount === 3200) {
+    //     // For plan 3200, set the end date to 90 days from the start date
+    //     endDate = new Date(startDate);
+    //     endDate.setDate(startDate.getDate() + 90);
+    // }
+
+    // if (!endDate || isNaN(endDate.getTime())) {
+    //     console.error("End date is invalid.");
+    //     return; // Exit if the end date is invalid
+    // }
+
             // Send data to the server to save in the transactions table
             fetch('/save-transaction', {
                 method: 'POST',
@@ -224,7 +242,8 @@
                     amount: amount,
                     status: 'pending',  // Initially, status is pending
                     userId: userId,      // Send the userId to the server
-                    transaction_date: new Date().toISOString() // Add current date/time
+                    transaction_date: new Date().toISOString(),
+                    // end_date: endDate.toISOString() // Add current date/time
                 })
             })
             .then(response => response.json())
@@ -245,8 +264,6 @@
             window.open(whatsappUrl, '_blank');
         });
     </script>
-    
-    
     
 </body>
 </html>

@@ -9,23 +9,30 @@
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
             padding: 20px;
+            margin: 0;
+            box-sizing: border-box;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
+
         table, th, td {
             border: 1px solid #ddd;
         }
+
         th, td {
             padding: 12px;
             text-align: left;
         }
+
         th {
             background-color: #4CAF50;
             color: white;
         }
+
         button {
             padding: 8px 16px;
             font-size: 14px;
@@ -34,29 +41,90 @@
             border-radius: 5px;
             margin-right: 10px;
         }
+
         .accept {
             background-color: #4CAF50;
             color: white;
         }
+
         .reject {
             background-color: #f44336;
             color: white;
         }
+
         .header {
             font-size: 24px;
             margin-bottom: 20px;
         }
+
         .transactions-table, .users-table {
             margin-top: 40px;
+        }
+
+        .remaining-days {
+            font-weight: bold;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+
+            .header {
+                font-size: 20px;
+            }
+
+            button {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .accept, .reject {
+                font-size: 12px;
+            }
+
+            .transactions-table, .users-table {
+                margin-top: 20px;
+            }
+
+            td {
+                word-wrap: break-word;
+                word-break: break-all;
+            }
+        }
+
+        /* For very small screens (phones in portrait mode) */
+        @media (max-width: 480px) {
+            .header {
+                font-size: 18px;
+            }
+
+            table, th, td {
+                font-size: 10px;
+            }
+
+            button {
+                padding: 5px 10px;
+                font-size: 10px;
+            }
+
+            .accept, .reject {
+                font-size: 10px;
+                padding: 5px 10px;
+            }
         }
     </style>
 </head>
 <body>
-
     <div class="header">
         <h2>All Users</h2>
     </div>
-
+    
     <% if (users && users.length > 0) { %>
         <table class="users-table">
             <thead>
@@ -69,7 +137,7 @@
             <tbody>
                 <% users.forEach((user, index) => { %>
                     <tr>
-                        <td><%= index + 1 %></td> <!-- User ID starts from 1 and increments -->
+                        <td><%= index + 1 %></td>
                         <td><%= user.name %></td>
                         <td><%= user.email %></td>
                     </tr>
@@ -83,7 +151,7 @@
     <div class="header">
         <h2>All Transactions</h2>
     </div>
-
+    
     <% if (transactions && transactions.length > 0) { %>
         <table class="transactions-table">
             <thead>
@@ -95,7 +163,7 @@
                     <th>Amount</th>
                     <th>Status</th>
                     <th>Created At</th>
-                    <th>Updated At</th>
+                    <th>End Date</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -108,16 +176,22 @@
                         <td><%= transaction.plan %></td>
                         <td><%= transaction.amount %></td>
                         <td><%= transaction.status %></td>
-                        <td><%= transaction.createdAt %></td>
-                        <td><%= transaction.updatedAt %></td>
+                
+                        <td><%= new Date(transaction.createdAt).toLocaleDateString() %></td>
                         <td>
-                            <button onclick="acceptTransaction('<%= transaction.id %>')" class="accept">Accept</button>
-                            <button onclick="rejectTransaction('<%= transaction.id %>')" class="reject">Reject</button>
-<<<<<<< HEAD
-                            
-=======
-
->>>>>>> backend
+                            <% if (transaction.end_date) { %>
+                                <%= new Date(transaction.end_date).toLocaleDateString() %>
+                            <% } else { %>
+                                <span style="color: red;">N/A</span>
+                            <% } %>
+                        </td>
+                        <td>
+                            <% if (transaction.status === 'pending') { %>
+                                <button onclick="acceptTransaction('<%= transaction.id %>')" class="accept">Accept</button>
+                                <button onclick="rejectTransaction('<%= transaction.id %>')" class="reject">Reject</button>
+                            <% } else { %>
+                                <span style="color: grey;">No Actions</span>
+                            <% } %>
                         </td>
                     </tr>
                 <% }) %>
@@ -126,55 +200,59 @@
     <% } else { %>
         <p>No transactions found</p>
     <% } %>
+
     <script>
-        // Accept Transaction function to send request to backend
-        function acceptTransaction(userId) {
-            if (!userId) {
-                alert('Invalid User ID');
+        async function acceptTransaction(transactionId) {
+            if (!transactionId) {
+                alert('Invalid Transaction ID');
                 return;
             }
-    
-            fetch(`/admin/accept-transaction/${userId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
+
+            try {
+                const response = await fetch(`/admin/accept-transaction/${transactionId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                alert(data.message);
-                location.reload();  // Reload the page to reflect changes
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error('Error accepting transaction:', error);
-                alert('Error accepting transaction');
-            });
+                alert('Server error while accepting transaction.');
+            }
         }
-    
-        // Reject Transaction function to send request to backend
-        function rejectTransaction(userId) {
-            if (!userId) {
-                alert('Invalid User ID');
+
+        async function rejectTransaction(transactionId) {
+            if (!transactionId) {
+                alert('Invalid Transaction ID');
                 return;
             }
-    
-            fetch(`/admin/reject-transaction/${userId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
+
+            try {
+                const response = await fetch(`/admin/reject-transaction/${transactionId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                alert(data.message);
-                location.reload();  // Reload the page to reflect changes
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error('Error rejecting transaction:', error);
-                alert('Error rejecting transaction');
-            });
+                alert('Server error while rejecting transaction.');
+            }
         }
     </script>
-    
 </body>
 </html>
