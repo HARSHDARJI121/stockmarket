@@ -5,253 +5,209 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - StockTrade</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            padding: 20px;
+        * {
             margin: 0;
+            padding: 0;
             box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(to right, #1f4037, #99f2c8);
+            color: #fff;
+            padding: 0px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 26px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        table, th, td {
-            border: 1px solid #ddd;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
         }
 
         th, td {
-            padding: 12px;
+            padding: 15px;
             text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         th {
-            background-color: #4CAF50;
-            color: white;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transition: 0.3s;
         }
 
         button {
-            padding: 8px 16px;
+            padding: 10px 20px;
             font-size: 14px;
-            cursor: pointer;
             border: none;
             border-radius: 5px;
-            margin-right: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
         }
 
         .accept {
-            background-color: #4CAF50;
+            background: #28a745;
             color: white;
         }
 
         .reject {
-            background-color: #f44336;
+            background: #dc3545;
             color: white;
         }
 
-        .header {
-            font-size: 24px;
-            margin-bottom: 20px;
+        button:hover {
+            opacity: 0.8;
         }
 
-        .transactions-table, .users-table {
-            margin-top: 40px;
-        }
-
-        .remaining-days {
-            font-weight: bold;
-        }
-
-        /* Responsive Design */
         @media (max-width: 768px) {
-            table {
-                font-size: 12px;
-            }
-
-            th, td {
-                padding: 8px;
-            }
-
-            .header {
-                font-size: 20px;
-            }
-
-            button {
-                padding: 6px 12px;
-                font-size: 12px;
-            }
-
-            .accept, .reject {
-                font-size: 12px;
-            }
-
-            .transactions-table, .users-table {
-                margin-top: 20px;
-            }
-
-            td {
-                word-wrap: break-word;
-                word-break: break-all;
-            }
-        }
-
-        /* For very small screens (phones in portrait mode) */
-        @media (max-width: 480px) {
-            .header {
-                font-size: 18px;
-            }
-
             table, th, td {
-                font-size: 10px;
-            }
-
-            button {
-                padding: 5px 10px;
-                font-size: 10px;
-            }
-
-            .accept, .reject {
-                font-size: 10px;
-                padding: 5px 10px;
+                font-size: 14px;
             }
         }
+        @media (max-width: 768px) {
+    .container {
+        overflow-x: auto;
+    }
+
+    table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    th, td {
+        font-size: 14px;
+        min-width: 120px; /* Ensures readability */
+    }
+}
+
     </style>
 </head>
 <body>
-    <div class="header">
+    <div class="container">
         <h2>All Users</h2>
-    </div>
-    
-    <% if (users && users.length > 0) { %>
-        <table class="users-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                </tr>
-            </thead>
-            <tbody>
-                <% users.forEach((user, index) => { %>
+        <% if (users && users.length > 0) { %>
+            <table>
+                <thead>
                     <tr>
-                        <td><%= index + 1 %></td>
-                        <td><%= user.name %></td>
-                        <td><%= user.email %></td>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
                     </tr>
-                <% }) %>
-            </tbody>
-        </table>
-    <% } else { %>
-        <p>No users found</p>
-    <% } %>
+                </thead>
+                <tbody>
+                    <% users.forEach((user, index) => { %>
+                        <tr>
+                            <td><%= index + 1 %></td>
+                            <td><%= user.name %></td>
+                            <td><%= user.email %></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        <% } else { %>
+            <p>No users found</p>
+        <% } %>
+    </div>
 
-    <div class="header">
+    <div class="container">
         <h2>All Transactions</h2>
-    </div>
-    
-    <% if (transactions && transactions.length > 0) { %>
-        <table class="transactions-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Email</th>
-                    <th>Name</th>
-                    <th>Plan</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Created At</th>
-                    <th>End Date</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <% transactions.forEach((transaction) => { %>
+        <% if (transactions && transactions.length > 0) { %>
+            <table>
+                <thead>
                     <tr>
-                        <td><%= transaction.id %></td>
-                        <td><%= transaction.email %></td>
-                        <td><%= transaction.name %></td>
-                        <td><%= transaction.plan %></td>
-                        <td><%= transaction.amount %></td>
-                        <td><%= transaction.status %></td>
-                
-                        <td><%= new Date(transaction.createdAt).toLocaleDateString() %></td>
-                        <td>
-                            <% if (transaction.end_date) { %>
-                                <%= new Date(transaction.end_date).toLocaleDateString() %>
-                            <% } else { %>
-                                <span style="color: red;">N/A</span>
-                            <% } %>
-                        </td>
-                        <td>
-                            <% if (transaction.status === 'pending') { %>
-                                <button onclick="acceptTransaction('<%= transaction.id %>')" class="accept">Accept</button>
-                                <button onclick="rejectTransaction('<%= transaction.id %>')" class="reject">Reject</button>
-                            <% } else { %>
-                                <span style="color: grey;">No Actions</span>
-                            <% } %>
-                        </td>
+                        <th>ID</th>
+                        <th>Email</th>
+                        <th>Name</th>
+                        <th>Plan</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Created At</th>
+                        <th>End Date</th>
+                        <th>Actions</th>
                     </tr>
-                <% }) %>
-            </tbody>
-        </table>
-    <% } else { %>
-        <p>No transactions found</p>
-    <% } %>
+                </thead>
+                <tbody>
+                    <% transactions.forEach((transaction) => { %>
+                        <tr>
+                            <td><%= transaction.id %></td>
+                            <td><%= transaction.email %></td>
+                            <td><%= transaction.name %></td>
+                            <td><%= transaction.plan %></td>
+                            <td><%= transaction.amount %></td>
+                            <td><%= transaction.status %></td>
+                            <td><%= new Date(transaction.createdAt).toLocaleDateString() %></td>
+                            <td><%= transaction.end_date ? new Date(transaction.end_date).toLocaleDateString() : '<span style="color: red;">N/A</span>' %></td>
+                            <td>
+                                <% if (transaction.status === 'pending') { %>
+                                    <button onclick="acceptTransaction('<%= transaction.id %>')" class="accept">Accept</button>
+                                    <button onclick="rejectTransaction('<%= transaction.id %>')" class="reject">Reject</button>
+                                <% } else { %>
+                                    <span style="color: grey;">No Actions</span>
+                                <% } %>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        <% } else { %>
+            <p>No transactions found</p>
+        <% } %>
+    </div>
 
     <script>
         async function acceptTransaction(transactionId) {
-            if (!transactionId) {
-                alert('Invalid Transaction ID');
-                return;
-            }
-
+            if (!transactionId) return alert('Invalid Transaction ID');
             try {
                 const response = await fetch(`/admin/accept-transaction/${transactionId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }
                 });
-
                 const data = await response.json();
-
-                if (response.ok) {
-                    alert(data.message);
-                    location.reload();
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error accepting transaction:', error);
-                alert('Server error while accepting transaction.');
-            }
+                if (response.ok) { alert(data.message); location.reload(); }
+                else { alert('Error: ' + data.message); }
+            } catch (error) { alert('Server error while accepting transaction.'); }
         }
 
         async function rejectTransaction(transactionId) {
-            if (!transactionId) {
-                alert('Invalid Transaction ID');
-                return;
-            }
-
+            if (!transactionId) return alert('Invalid Transaction ID');
             try {
                 const response = await fetch(`/admin/reject-transaction/${transactionId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }
                 });
-
                 const data = await response.json();
-
-                if (response.ok) {
-                    alert(data.message);
-                    location.reload();
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error rejecting transaction:', error);
-                alert('Server error while rejecting transaction.');
-            }
+                if (response.ok) { alert(data.message); location.reload(); }
+                else { alert('Error: ' + data.message); }
+            } catch (error) { alert('Server error while rejecting transaction.'); }
         }
     </script>
 </body>
