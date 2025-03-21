@@ -106,7 +106,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public'))); // Serve static files (CSS, JS, images)
 app.use(session({
-  secret: 'pippip-1340',  // Secret key for encrypting session data
+  secret: process.env.SESSION,  
   resave: false,          // Don't resave sessions if no changes
   saveUninitialized: true, // Save sessions even if they are not modified
   cookie: { secure: false } // For HTTP, set secure to false; for HTTPS, set it to true
