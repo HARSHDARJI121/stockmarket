@@ -13,17 +13,27 @@ require('dotenv').config();
 
 
 const app = express();
-const PORT = 4000;
+const PORT = 1000;
 
 // Configure Sequelize for MySQL connection
 const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
   host: process.env.DB_HOST,
   dialect: 'mysql',
-  port: process.env.DB_PORT,
-  port:3306,
+  port: process.env.DB_PORT || 3306,
   logging: false,  // Optional: Enable to see SQL queries
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 30000,
+    idle: 10000
+  },
+  dialectOptions: {
+    ssl: process.env.NODE_ENV === 'production' ? {
+      require: true,
+      rejectUnauthorized: false
+    } : false
+  }
 });
-
 sequelize.authenticate()
   .then(() => {
     console.log('Database connection successful!');
