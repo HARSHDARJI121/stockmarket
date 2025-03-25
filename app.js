@@ -508,6 +508,47 @@ app.get('/logout', (req, res, next) => {
     res.redirect('/');
   }
 });
+app.delete('/admin/delete-transaction/:id', async (req, res) => {
+  const transactionId = req.params.id;
+  const t = await sequelize.transaction();  // Start a transaction
+
+  try {
+    // Delete from AcceptedTransaction table
+    const deletedFromAcceptedTransaction = await AcceptedTransaction.destroy({
+      where: { id: transactionId },
+      transaction: t  // Ensure this operation is part of the transaction
+    });
+
+    // If no rows were deleted from AcceptedTransaction, return a 404 error
+    if (deletedFromAcceptedTransaction === 0) {
+      return res.status(404).json({ message: 'Transaction not found in AcceptedTransactions' });
+    }
+
+    // Delete from Transaction table
+    const deletedFromTransaction = await Transaction.destroy({
+      where: { id: transactionId },
+      transaction: t  // Ensure this operation is part of the transaction
+    });
+
+    // If no rows were deleted from Transaction, return a 404 error
+    if (deletedFromTransaction === 0) {
+      // If deletion from the Transaction table fails, you may need to manually rollback
+      await t.rollback();
+      return res.status(404).json({ message: 'Transaction not found in Transactions' });
+    }
+
+    // Commit the transaction to save all changes
+    await t.commit();
+
+    // Send a success response or redirect to the admin page to update the list of transactions
+    return res.status(200).json({ message: 'Transaction deleted successfully' });
+  } catch (error) {
+    // If any error occurs, rollback the transaction
+    await t.rollback();
+    console.error('Error during transaction deletion: ', error);  // Log the full error
+    return res.status(500).json({ message: 'Error deleting transaction' });
+  }
+});
 
 
 
