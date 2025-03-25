@@ -20,7 +20,10 @@ const signup = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Insert new user record into the database (without 'plan' field)
-        const user = new User({ name, email, password: hashedPassword });
+        const user = new User({ 
+            name:name,
+            email:email,
+            password: hashedPassword });
         await user.save();
 
         // Redirect to login page after successful signup
