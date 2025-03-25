@@ -1,115 +1,48 @@
+require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const path = require('path');
 const morgan = require('morgan'); // Logger for better debugging
-const { Sequelize, DataTypes } = require('sequelize'); // Sequelize for DB handling
+const mongoose = require('mongoose'); // MongoDB ORM
 const userController = require('./controllers/userController'); // Import the user controller
 const isAuthenticated = require('./controllers/auth'); // Authentication check
 const cron = require('node-cron');
-const AcceptedTransaction = require('./models/acceptedTransaction');
-const db = require('./config/db');  
-require('dotenv').config();
-
+const { User, Transaction, AcceptedTransaction } = require('./models'); // Import models
 
 const app = express();
-const PORT = 1000;
+const PORT = 3000;
 
-// Configure Sequelize for MySQL connection
-const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
-  host: process.env.DB_HOST,
-  dialect: 'mysql',
-  port: process.env.DB_PORT || 3306,
-  logging: false,  // Optional: Enable to see SQL queries
-  pool: {
-    max: 5,
-    min: 0,
-    acquire: 30000,
-    idle: 10000
-  },
-  dialectOptions: {
-    ssl: process.env.NODE_ENV === 'production' ? {
-      require: true,
-      rejectUnauthorized: false
-    } : false
-  }
-});
-sequelize.authenticate()
-  .then(() => {
-    console.log('Database connection successful!');
-  })
-  .catch((err) => {
-    console.error('Unable to connect to the database:', err);
-  });
+// Add this check after requires
+if (!process.env.MONGO_URI) {
+    console.error('MONGO_URI is not defined in .env file');
+    process.exit(1);
+}
 
-
-
-  
-const User = sequelize.define('User', {
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,  // Ensures no duplicate emails
-  },
-  password: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  plan: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    defaultValue: 'basic',  // Set default plan value
-  },
+// Update your MongoDB connection
+mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 30000, // Increase timeout to 30 seconds
+    socketTimeoutMS: 45000, // How long to wait for responses from MongoDB
+    connectTimeoutMS: 30000, // How long to wait for initial connection
+})
+.then(() => {
+    console.log('MongoDB connection successful!');
+})
+.catch((err) => {
+    console.error('MongoDB connection error:', err);
+    // Don't exit the process, just log the error
+    console.log('Please check your MongoDB Atlas configuration and network connection');
 });
 
-const Transaction = sequelize.define('Transaction', {
-  id: {
-    type: Sequelize.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
-  email: {
-    type: Sequelize.STRING,
-    allowNull: false,
-  },
-  name: {
-    type: Sequelize.STRING,
-    allowNull: false,
-  },
-  plan: {
-    type: Sequelize.STRING,
-    allowNull: false,
-  },
-  amount: {
-    type: Sequelize.STRING,
-    allowNull: false,
-  },
-  status: {
-    type: Sequelize.STRING,
-    allowNull: false,
-  },
-  transaction_date: {
-    type: Sequelize.DATE,
-    allowNull: false,
-  },
-  end_date: {
-    type: Sequelize.DATE, // Make sure the type is Date or DATETIME
-    allowNull: true,
-  },
+// Add connection error handler
+mongoose.connection.on('error', (err) => {
+    console.error('MongoDB connection error:', err);
 });
 
-
-
-
-// Sync the database (create table if it doesn't exist)
-sequelize.sync({ force: false }) // false will preserve existing data, true will drop and recreate tables
-  .then(() => console.log('Database synced'))
-  .catch(err => console.error('Error syncing database:', err));
-
+// Add disconnection handler
+mongoose.connection.on('disconnected', () => {
+    console.log('MongoDB disconnected');
+});
 
 // Middleware setup
 app.use(morgan('dev')); // Logs incoming requests
@@ -132,7 +65,6 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null; // Makes `user` available in all views
   next();
 });
-
 // Routes
 app.get('/', (req, res) => {
   try {
@@ -143,7 +75,6 @@ app.get('/', (req, res) => {
       'https://cdn.futura-sciences.com/sources/images/cours%20trading.jpeg',
       'https://img.freepik.com/premium-photo/investment-trading-background-with-bar-charts_1200-1408.jpg?w=2000',
     ];
-
     res.render('index', { images });
   } catch (error) {
     console.error('Error rendering index:', error);
@@ -154,11 +85,11 @@ app.get('/', (req, res) => {
 // Admin Page Route (Displays list of users and their subscription status)
 app.get('/admin', async (req, res) => {
   try {
-    // Fetch users from the database
-    const users = await sequelize.query('SELECT * FROM users', { type: sequelize.QueryTypes.SELECT });
+    // Fetch users from the MongoDB database using Mongoose model
+    const users = await User.find();  // This assumes 'User' is your Mongoose model
 
-    // Fetch transactions from the database
-    const transactions = await sequelize.query('SELECT * FROM Transactions', { type: sequelize.QueryTypes.SELECT });
+    // Fetch transactions from the MongoDB database using Mongoose model
+    const transactions = await Transaction.find();  // This assumes 'Transaction' is your Mongoose model
 
     // Calculate remaining days for each user
     users.forEach(user => {
@@ -178,10 +109,6 @@ app.get('/admin', async (req, res) => {
   }
 });
 // Accept the transaction (promote user to premium)
-// Example route to accept a transaction by user ID
-
-
-
 app.post('/signup', (req, res, next) => {
   if (userController.signup) {
     userController.signup(req, res, next);
@@ -189,7 +116,6 @@ app.post('/signup', (req, res, next) => {
     next(new Error('Signup handler is missing in the userController.'));
   }
 });
-
 
 // Transaction Page (Displays user-specific transaction data)
 app.get('/transaction', isAuthenticated, (req, res) => {
@@ -207,7 +133,7 @@ app.get('/transaction', isAuthenticated, (req, res) => {
       amount = 3200;
       break;
     default:
-      amount = 1251; // Default amount if the plan is unrecognized
+      amount = 1251;
       break;
   }
 
@@ -219,54 +145,42 @@ app.get('/transaction', isAuthenticated, (req, res) => {
   });
 });
 
-const standard = "standard";
-const premium = "premium";
-
-
-
 app.post('/admin/accept-transaction/:id', async (req, res) => {
   try {
     const transactionId = req.params.id;
     console.log(`Processing transaction ID: ${transactionId}`);
 
-    // Find the transaction in the Transactions table
-    const transaction = await Transaction.findByPk(transactionId);
+    const transaction = await Transaction.findById(transactionId);
 
     if (!transaction) {
       console.log(`Transaction not found for ID: ${transactionId}`);
       return res.status(404).json({ message: 'Transaction not found' });
     }
 
-    // If transaction is already accepted, return
     if (transaction.status === 'accepted') {
       return res.json({ message: 'Transaction is already accepted' });
     }
 
-    // Update transaction status
     transaction.status = 'accepted';
-
-    // Set start_date to current date
-    let startDate = new Date();
+    const startDate = new Date();
     let endDate;
-    let plan = transaction.plan || 'unknown'; // Default to 'unknown' if plan is not set
+    let plan = transaction.plan || 'unknown';
 
-    // Determine plan and set end date
     if (transaction.amount === 1251 || transaction.plan === 'standard') {
       endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 30); // 30-day validity
+      endDate.setDate(startDate.getDate() + 30);
       plan = 'standard';
     } else if (transaction.amount === 3200 || transaction.plan === 'premium') {
       endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 90); // 90-day validity
+      endDate.setDate(startDate.getDate() + 90);
       plan = 'premium';
     } else {
       endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 30); // Default 30-day plan
+      endDate.setDate(startDate.getDate() + 30);
     }
 
     console.log(`Assigned Plan: ${plan}, Start Date: ${startDate}, End Date: ${endDate}`);
 
-    // Store transaction in AcceptedTransactions table
     const acceptedTransaction = await AcceptedTransaction.create({
       email: transaction.email,
       name: transaction.name,
@@ -276,14 +190,12 @@ app.post('/admin/accept-transaction/:id', async (req, res) => {
       end_date: endDate,
       status: 'accepted',
       transaction_date: new Date(),
-      transaction_id: transactionId // Link transaction ID
+      transaction_id: transactionId
     });
 
-    // ✅ Automatically update end_date in the Transactions table
     transaction.end_date = endDate;
     await transaction.save();
 
-    // Calculate remaining days
     const daysLeft = Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24));
 
     console.log(`Transaction Accepted! Plan: ${plan}, Days Left: ${daysLeft}`);
@@ -300,22 +212,16 @@ app.post('/admin/accept-transaction/:id', async (req, res) => {
   }
 });
 
-
-// 🔹 **Cron job to update expired transactions every day at midnight**
-cron.schedule('0 0 * * *', async () => { 
+cron.schedule('0 0 * * *', async () => {
   try {
     console.log('Running daily transaction status update job...');
     const now = new Date();
 
-    // Find transactions that are active and expired
-    const expiredTransactions = await Transaction.findAll({
-      where: {
-        status: 'accepted',
-        end_date: { [Op.lte]: now } // end_date <= today
-      }
+    const expiredTransactions = await Transaction.find({
+      status: 'accepted',
+      end_date: { $lte: now }
     });
 
-    // Update expired transactions
     for (const transaction of expiredTransactions) {
       transaction.status = 'inactive';
       await transaction.save();
@@ -323,44 +229,44 @@ cron.schedule('0 0 * * *', async () => {
     }
 
     console.log('Transaction status update job completed.');
-
   } catch (error) {
     console.error('Error in cron job:', error);
   }
 });
+
 app.get('/admin/transactions', async (req, res) => {
   try {
-      const transactions = await db.query(`
-          SELECT t.*, at.end_date 
-          FROM transactions t
-          LEFT JOIN accepted_transactions at ON t.email = at.email
-          ORDER BY t.createdAt DESC
-      `);
+    const transactions = await Transaction.aggregate([
+      {
+        $lookup: {
+          from: 'acceptedtransactions',
+          localField: 'email',
+          foreignField: 'email',
+          as: 'accepted_transactions'
+        }
+      },
+      { $sort: { createdAt: -1 } }
+    ]);
 
-      res.render('admin', { transactions });
+    res.render('admin', { transactions });
   } catch (error) {
-      console.error("Error fetching transactions:", error);
-      res.status(500).json({ message: "Internal server error" });
+    console.error("Error fetching transactions:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
-
-
-
-
 app.post('/admin/reject-transaction/:id', async (req, res) => {
   const transactionId = req.params.id;
-  
+
   try {
-    // Find the transaction by ID
-    const transaction = await Transaction.findOne({ where: { id: transactionId } });
+    const transaction = await Transaction.findById(transactionId);
 
     if (!transaction) {
       return res.status(404).send('Transaction not found');
     }
 
-    // Delete the transaction record
-    await Transaction.destroy({ where: { id: transactionId } });
+    await AcceptedTransaction.deleteOne({ transaction_id: transactionId });
+    await Transaction.deleteOne({ _id: transactionId });
 
     res.json({ success: true, message: 'Transaction rejected and deleted' });
   } catch (err) {
@@ -369,101 +275,101 @@ app.post('/admin/reject-transaction/:id', async (req, res) => {
   }
 });
 
-// Dashboard Route
-app.get('/dashboard', async (req, res) => {
-  if (!req.session.user) {
-      return res.redirect('/login');  // Redirect if the user is not logged in
-  }
-
+// Add new route for deleting transactions
+app.delete('/admin/delete-transaction/:id', async (req, res) => {
   try {
-      // Ensure you are using the correct table 'AcceptedTransactions'
-      const [rows] = await db.execute(
-          'SELECT * FROM AcceptedTransactions WHERE email = ?',
-          [req.session.user.email]  // Use the logged-in user's email to fetch their transactions
-      );
+    const transactionId = req.params.id;
+    console.log(`Attempting to delete transaction ID: ${transactionId}`);
 
-      // Check if the user has any accepted transactions
-      if (rows.length === 0) {
-          console.log('No transactions found for user:', req.session.user.email);
+    // First find the transaction to verify it exists
+    const transaction = await Transaction.findById(transactionId);
+    if (!transaction) {
+      console.log(`Transaction not found for ID: ${transactionId}`);
+      return res.status(404).json({ success: false, message: 'Transaction not found' });
+    }
+
+    // Delete from AcceptedTransaction collection
+    const acceptedDeleteResult = await AcceptedTransaction.deleteMany({
+      transaction_id: transactionId
+    });
+    console.log(`Deleted ${acceptedDeleteResult.deletedCount} accepted transactions`);
+
+    // Delete from Transaction collection
+    const transactionDeleteResult = await Transaction.deleteOne({ _id: transactionId });
+    console.log(`Deleted ${transactionDeleteResult.deletedCount} transactions`);
+
+    res.json({
+      success: true,
+      message: 'Transaction deleted successfully',
+      deletedCount: {
+        transactions: transactionDeleteResult.deletedCount,
+        acceptedTransactions: acceptedDeleteResult.deletedCount
       }
+    });
 
-      // Render dashboard.ejs and pass the user's data and transactions
-      res.render('dashboard', { user: req.session.user, transactions: rows });
-  } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      res.status(500).render('error', { message: 'Error fetching dashboard data' });
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    res.status(500).json({ success: false, message: 'Error deleting transaction' });
   }
 });
 
+// Dashboard Route
+app.get('/dashboard', async (req, res) => {
+  if (!req.session.user) {
+    return res.redirect('/login');
+  }
 
+  try {
+    const rows = await AcceptedTransaction.find({ email: req.session.user.email });
+
+    if (rows.length === 0) {
+      console.log('No transactions found for user:', req.session.user.email);
+    }
+
+    res.render('dashboard', { user: req.session.user, transactions: rows });
+  } catch (err) {
+    console.error('Error fetching dashboard data:', err);
+    res.status(500).render('error', { message: 'Error fetching dashboard data' });
+  }
+});
 
 app.post('/save-transaction', async (req, res) => {
   try {
     const { user_email, user_name, plan, amount, status, userId, transaction_date } = req.body;
 
-    // Check if all necessary data is provided
     if (!user_email || !user_name || !plan || !amount || !status || !userId || !transaction_date) {
       return res.status(400).json({ success: false, message: 'Missing required fields.' });
     }
 
-    // Convert transaction_date string to Date object (make sure the date format is correct)
     const startDate = new Date(transaction_date);
-    
-    // Validate the startDate, ensure it's a valid date
     if (isNaN(startDate)) {
       return res.status(400).json({ success: false, message: 'Invalid transaction date.' });
     }
 
     let finalEndDate;
-
-    // Calculate the end_date based on the selected plan
     if (amount === '1251') {
-      // For plan 1251, set the end date to 30 days from the transaction date
       finalEndDate = new Date(startDate);
       finalEndDate.setDate(startDate.getDate() + 30);
     } else if (amount === '3200') {
-      // For plan 3200, set the end date to 90 days from the transaction date
       finalEndDate = new Date(startDate);
       finalEndDate.setDate(startDate.getDate() + 90);
     } else if (amount === 'premium') {
-      // For 'premium' plan, set the end date to 60 days from the transaction date
       finalEndDate = new Date(startDate);
       finalEndDate.setDate(startDate.getDate() + 60);
     } else {
-      // Handle invalid plan case
       return res.status(400).json({ success: false, message: 'Invalid plan provided.' });
     }
 
-    // Ensure finalEndDate is valid
-    if (isNaN(finalEndDate)) {
-      return res.status(400).json({ success: false, message: 'Error calculating end date.' });
-    }
-
-    // Create a new transaction record in the database
     const transaction = await Transaction.create({
       email: user_email,
       name: user_name,
       plan: plan,
       amount: amount,
       status: status,
-      transaction_date: startDate, // Save the transaction date
-      end_date: finalEndDate // Save the calculated end date
+      transaction_date: startDate,
+      end_date: finalEndDate
     });
 
-    // Check if there is an accepted transaction and update the end date accordingly
-    const acceptedTransaction = await AcceptedTransaction.findOne({
-      where: { email: user_email }
-    });
-
-    if (acceptedTransaction && acceptedTransaction.end_date) {
-      // Update the end_date of the current transaction if there's an accepted transaction
-      await Transaction.update(
-        { end_date: acceptedTransaction.end_date },
-        { where: { email: user_email } }
-      );
-    }
-
-    // Return success response
     return res.status(200).json({ success: true, transaction: transaction });
 
   } catch (error) {
@@ -471,8 +377,6 @@ app.post('/save-transaction', async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error saving transaction.' });
   }
 });
-
-
 
 // Route to render the login page
 app.get('/login', (req, res) => {
@@ -508,49 +412,6 @@ app.get('/logout', (req, res, next) => {
     res.redirect('/');
   }
 });
-app.delete('/admin/delete-transaction/:id', async (req, res) => {
-  const transactionId = req.params.id;
-  const t = await sequelize.transaction();  // Start a transaction
-
-  try {
-    // Delete from AcceptedTransaction table
-    const deletedFromAcceptedTransaction = await AcceptedTransaction.destroy({
-      where: { id: transactionId },
-      transaction: t  // Ensure this operation is part of the transaction
-    });
-
-    // If no rows were deleted from AcceptedTransaction, return a 404 error
-    if (deletedFromAcceptedTransaction === 0) {
-      return res.status(404).json({ message: 'Transaction not found in AcceptedTransactions' });
-    }
-
-    // Delete from Transaction table
-    const deletedFromTransaction = await Transaction.destroy({
-      where: { id: transactionId },
-      transaction: t  // Ensure this operation is part of the transaction
-    });
-
-    // If no rows were deleted from Transaction, return a 404 error
-    if (deletedFromTransaction === 0) {
-      // If deletion from the Transaction table fails, you may need to manually rollback
-      await t.rollback();
-      return res.status(404).json({ message: 'Transaction not found in Transactions' });
-    }
-
-    // Commit the transaction to save all changes
-    await t.commit();
-
-    // Send a success response or redirect to the admin page to update the list of transactions
-    return res.status(200).json({ message: 'Transaction deleted successfully' });
-  } catch (error) {
-    // If any error occurs, rollback the transaction
-    await t.rollback();
-    console.error('Error during transaction deletion: ', error);  // Log the full error
-    return res.status(500).json({ message: 'Error deleting transaction' });
-  }
-});
-
-
 
 // Global Error Handler for unexpected errors
 app.use((err, req, res, next) => {

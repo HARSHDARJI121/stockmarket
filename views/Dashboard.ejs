@@ -30,17 +30,18 @@
         }
 
         h1 {
-            font-size: 2rem;
+            font-size: 2.5rem;
             color: #ffeb3b;
+            margin-bottom: 20px;
         }
 
         p {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             color: #ddd;
         }
 
         .transaction-info {
-            margin-top: 20px;
+            margin-top: 30px;
             text-align: left;
         }
 
@@ -80,6 +81,18 @@
             font-weight: bold;
             color: #ffeb3b;
             text-transform: uppercase;
+        }
+
+        .expired-status {
+            color: red;
+            font-weight: bold;
+        }
+
+        .no-transactions {
+            text-align: center;
+            color: #ffeb3b;
+            font-weight: bold;
+            margin-top: 20px;
         }
     </style>
 </head>
@@ -123,19 +136,23 @@
                             </div>
                             <p class="status">Status: <%= transaction.status %></p>
                         <% } else { %>
-                            <p class="status" style="color: red; font-weight: bold;">Your plan has expired ❌</p>
+                            <p class="status expired-status">Your plan has expired ❌</p>
                         <% } %>
                     </div>
                 <% }) %>
             <% } else { %>
-                <p>No accepted transactions yet 🚀</p>
+                <p class="no-transactions">No accepted transactions yet 🚀</p>
             <% } %>
 
             <% if (transactions.every(t => new Date(t.end_date) < new Date())) { %>
-                <p style="text-align: center; color: red; font-weight: bold;">No active plans 🚀</p>
+                <p class="no-transactions">No active plans 🚀</p>
             <% } %>
         </div>
     </div>
 
 </body>
 </html>
+
+
+
+

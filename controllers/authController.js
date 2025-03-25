@@ -1,8 +1,8 @@
+// Your existing user controller functions (signup, login, logout) remain the same
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User'); // Adjust path to your User model
 
-// Secret key for JWT - You can store this in environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Signup - Register a new user
@@ -89,5 +89,3 @@ exports.logout = (req, res) => {
     // Invalidate the token on the client-side (you can use a token blacklist, but in most cases, just delete the token on the client side)
     res.status(200).json({ message: 'Logged out successfully' });
 };
-
-

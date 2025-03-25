@@ -1,4 +1,4 @@
-const db = require('../config/db'); // Ensure correct DB connection
+const Transaction = require('../models/Transaction.js'); // Ensure correct path to model
 
 const addTransaction = async (req, res) => {
     try {
@@ -19,14 +19,19 @@ const addTransaction = async (req, res) => {
         const endDate = new Date(currentDate);
         endDate.setDate(currentDate.getDate() + daysToAdd);
 
-        // Format date for MySQL (YYYY-MM-DD)
-        const formattedEndDate = endDate.toISOString().split('T')[0];
-
         // Insert into database
-        const query = `INSERT INTO transactions (email, name, plan, amount, status, createdAt, end_date) VALUES (?, ?, ?, ?, ?, NOW(), ?)`;
-        await db.execute(query, [email, name, plan, amount, status, formattedEndDate]);
+        const transaction = new Transaction({
+            email,
+            name,
+            plan,
+            amount,
+            status,
+            end_date: endDate
+        });
 
-        res.status(201).json({ message: 'Transaction added successfully!', end_date: formattedEndDate });
+        await transaction.save();
+
+        res.status(201).json({ message: 'Transaction added successfully!', end_date: endDate });
     } catch (error) {
         console.error('Error adding transaction:', error);
         res.status(500).json({ error: 'Internal Server Error' });

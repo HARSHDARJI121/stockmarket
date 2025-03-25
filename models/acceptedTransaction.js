@@ -1,79 +1,74 @@
-const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = new Sequelize('stocktrade', 'root', 'Harsh@5489', {
-    host: 'localhost',
-    dialect: 'mysql',
-});
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
-// Define AcceptedTransaction model
-const AcceptedTransaction = sequelize.define('AcceptedTransaction', {
-    id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-    },
+// Define the AcceptedTransaction Schema
+const acceptedTransactionSchema = new Schema({
     email: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
     name: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
     plan: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: String,
+        required: true,
     },
     amount: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
+        type: Number,
+        required: true,
     },
     status: {
-        type: DataTypes.ENUM('pending', 'completed', 'failed'),
-        allowNull: false,
-        defaultValue: 'accepted',
+        type: String,
+        enum: ['pending', 'completed', 'failed'],
+        default: 'accepted',
+        required: true,
     },
     transaction_date: {
-        type: DataTypes.DATE,
-        allowNull: false,
+        type: Date,
+        required: true,
     },
 }, {
-    timestamps: true,
-    tableName: 'AcceptedTransactions',
+    timestamps: true, // Automatically add `createdAt` and `updatedAt`
+    collection: 'AcceptedTransactions', // Specify the collection name
 });
 
-sequelize.sync();
+// Create the AcceptedTransaction Model
+const AcceptedTransaction = mongoose.model('AcceptedTransaction', acceptedTransactionSchema);
 
-module.exports = AcceptedTransaction;
-// Define the AcceptedTransactions model
-const AcceptedTransactions = sequelize.define('AcceptedTransactions', {
+// Define another model for AcceptedTransactions (if required, can be similar)
+const acceptedTransactionsSchema = new Schema({
     name: {
-      type: DataTypes.STRING,
-      allowNull: false
+        type: String,
+        required: true,
     },
     email: {
-      type: DataTypes.STRING,
-      allowNull: false
+        type: String,
+        required: true,
     },
     plan: {
-      type: DataTypes.STRING,
-      allowNull: false
+        type: String,
+        required: true,
     },
     amount: {
-      type: DataTypes.INTEGER,
-      allowNull: false
+        type: Number,
+        required: true,
     },
     start_date: {
-      type: DataTypes.DATE,
-      allowNull: false
+        type: Date,
+        required: true,
     },
     end_date: {
-      type: DataTypes.DATE,
-      allowNull: false
-    }
-  }, {
-    tableName: 'AcceptedTransactions', // Make sure this matches your table name
-    timestamps: false // If you don't have createdAt/updatedAt fields
-  });
-  
-  module.exports = AcceptedTransactions; // Export the model for use elsewhere
-  
+        type: Date,
+        required: true,
+    },
+}, {
+    collection: 'AcceptedTransactions', // Ensure this matches the collection name
+    timestamps: false, // Disable timestamps if you don't want `createdAt` and `updatedAt`
+});
+
+// Create the AcceptedTransactions Model
+const AcceptedTransactions = mongoose.model('AcceptedTransactions', acceptedTransactionsSchema);
+
+module.exports = { AcceptedTransaction, AcceptedTransactions };

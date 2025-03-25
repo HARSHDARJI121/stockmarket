@@ -1,13 +1,24 @@
 require('dotenv').config(); // This will load environment variables from the .env file
-const mysql = require('mysql2');
+const { MongoClient } = require('mongodb');
 
-// Create a connection pool to the database using environment variables
-const db = mysql.createPool({
-    host: process.env.DB_HOST,           // Database host
-    user: process.env.DB_USER,           // Database user
-    password: process.env.DB_PASSWORD,   // Database password
-    database: process.env.DB_NAME,       // Database name
-});
+// Check if URI exists
+if (!process.env.MONGO_URI) {
+    console.error('MongoDB URI is not defined in environment variables');
+    process.exit(1);
+}
 
-// Export the connection pool to be used in other files
-module.exports = db.promise();
+// Create a MongoDB client using environment variables
+const uri = process.env.MONGO_URI;
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+
+// Export a function that returns the connected client
+module.exports = async () => {
+    try {
+        await client.connect();
+        console.log('Database connected successfully');
+        return client;
+    } catch (error) {
+        console.error('Database connection error:', error);
+        throw error;
+    }
+};

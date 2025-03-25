@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../config/db'); // Assuming db is configured to use MySQL (or any other DB you are using)
+const User = require('../models/User.js');  // Importing User model from the separate file
+const Transaction = require('../models/Transactions.js');  // Importing Transaction model from the separate file
 
 // Secret key for signing the JWT
 const JWT_SECRET = 'yourSecretKey'; // Store this securely (e.g., in an environment variable)
@@ -19,10 +20,8 @@ const signup = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Insert new user record into the database (without 'plan' field)
-        const [result] = await db.execute(
-            'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
-            [name, email, hashedPassword]
-        );
+        const user = new User({ name, email, password: hashedPassword });
+        await user.save();
 
         // Redirect to login page after successful signup
         res.redirect('/login');
@@ -38,14 +37,14 @@ const login = async (req, res) => {
 
     try {
         // Check if the user exists
-        const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
+        const user = await User.findOne({ email });
 
-        if (rows.length === 0) {
+        if (!user) {
             return res.status(400).render('login', { error: 'User not found' });
         }
 
         // Compare the entered password with the hashed password in the database
-        const isMatch = await bcrypt.compare(password, rows[0].password);
+        const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
             return res.status(400).render('login', { error: 'Incorrect password' });
@@ -53,9 +52,9 @@ const login = async (req, res) => {
 
         // Store user data in session
         req.session.user = {
-            id: rows[0].id,
-            email: rows[0].email,
-            name: rows[0].name,
+            id: user._id,
+            email: user.email,
+            name: user.name,
         };
 
         // Redirect to dashboard or home page
@@ -66,16 +65,15 @@ const login = async (req, res) => {
     }
 };
 
-
 // Forgot Password logic
 const forgotPassword = async (req, res) => {
     const { email, pass } = req.body;
 
     try {
         // Step 1: Check if the email exists in the database
-        const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
+        const user = await User.findOne({ email });
 
-        if (rows.length === 0) {
+        if (!user) {
             return res.status(400).render('forgot-password', { error: 'Email not found' });
         }
 
@@ -83,7 +81,8 @@ const forgotPassword = async (req, res) => {
         const hashedPassword = await bcrypt.hash(pass, 10);
 
         // Step 3: Update the password in the database
-        await db.execute('UPDATE users SET password = ? WHERE email = ?', [hashedPassword, email]);
+        user.password = hashedPassword;
+        await user.save();
 
         // Step 4: Redirect the user to the login page with a success message
         res.redirect('/login'); // Password updated, redirect to login page
@@ -122,13 +121,11 @@ const getDashboard = async (req, res) => {
 
     try {
         // Fetch user info from the database
-        const [rows] = await db.execute('SELECT * FROM users WHERE id = ?', [userId]);
+        const user = await User.findById(userId);
 
-        if (rows.length === 0) {
+        if (!user) {
             return res.status(404).render('error', { message: 'User not found' });
         }
-
-        const user = rows[0];
 
         // Render the dashboard with user data
         res.render('dashboard', {
@@ -158,7 +155,7 @@ const saveTransaction = async (req, res) => {
         }
 
         // Insert the transaction into the database
-        const transaction = await Transaction.create({
+        const transaction = new Transaction({
             email,
             name,
             plan,
@@ -166,11 +163,12 @@ const saveTransaction = async (req, res) => {
             status,
             user_id,  // Pass user_id here
         });
+        await transaction.save();
 
         // Return success response
         res.status(201).json({
             message: 'Transaction saved successfully!',
-            transactionId: transaction.id
+            transactionId: transaction._id
         });
     } catch (error) {
         console.error('Error saving transaction:', error);
@@ -180,3 +178,7 @@ const saveTransaction = async (req, res) => {
 
 // Export the functions properly
 module.exports = { signup, login, forgotPassword, getDashboard, logout, saveTransaction, verifyToken };
+
+
+
+
