@@ -1,36 +1,65 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User.js');  // Importing User model from the separate file
-const Transaction = require('../models/Transactions.js');  // Importing Transaction model from the separate file
+const User = require('../models/User');  // Assuming the User model is in the 'models' folder
+const { body, validationResult } = require('express-validator'); // To validate inputs
 
-// Secret key for signing the JWT
-const JWT_SECRET = 'yourSecretKey'; // Store this securely (e.g., in an environment variable)
+// Secret key for signing the JWT (use environment variable in production)
+const JWT_SECRET = process.env.JWT_SECRET || 'yourSecretKey'; // Store securely in production
 
-// Signup logic (only requires name, email, password)
+// Signup validation middleware
+const validateSignup = [
+    body('name').notEmpty().withMessage('Name is required'),
+    body('email').isEmail().withMessage('Invalid email format'),
+    body('password')
+        .isLength({ min: 8 })
+        .withMessage('Password must be at least 8 characters long')
+        .matches(/\d/)
+        .withMessage('Password must contain a number')
+        .matches(/[A-Za-z]/)
+        .withMessage('Password must contain at least one letter')
+];
+
+// Signup logic
 const signup = async (req, res) => {
     try {
-        const { name, email, password } = req.body; // Extract fields from the request
+        // Run validation checks
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).render('signup', { errors: errors.array() });
+        }
 
-        // Validate required fields (name, email, password)
-        if (!name || !email || !password) {
-            return res.status(400).render('signup', { error: 'Name, email, and password are required' });
+        const { name, email, password } = req.body;
+
+        // Check if the email already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).render('signup', { error: 'Email is already registered' });
         }
 
         // Hash the password before saving
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Insert new user record into the database (without 'plan' field)
-        const user = new User({ 
-            name:name,
-            email:email,
-            password: hashedPassword });
+        // Create new user instance
+        const user = new User({
+            name,
+            email,
+            password: hashedPassword
+        });
+
+        // Save user to the database
         await user.save();
 
-        // Redirect to login page after successful signup
+        // Create a JWT token for the user (optional step)
+        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
+
+        // Store token in cookies (optional) for authenticated session
+        res.cookie('auth_token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+
+        // Redirect to the login page after successful signup
         res.redirect('/login');
     } catch (error) {
         console.error('Error during signup:', error);
-        res.status(500).render('signup', { error: 'Server Error' });
+        return res.status(500).render('signup', { error: 'Server Error. Please try again later.' });
     }
 };
 
