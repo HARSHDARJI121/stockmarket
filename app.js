@@ -332,7 +332,6 @@ app.delete('/admin/delete-transaction/:id', async (req, res) => {
   }
 });
 
-// Dashboard Route
 app.get('/dashboard', async (req, res) => {
   if (!req.session.user) {
     console.error('User session not found. Redirecting to login.');
@@ -354,6 +353,7 @@ app.get('/dashboard', async (req, res) => {
       console.log('No transactions found for user:', userEmail);
     }
 
+    // Make sure 'dashboard' view is rendering properly with user data and transactions
     res.render('dashboard', { user: req.session.user, transactions: rows });
   } catch (err) {
     console.error('Error fetching dashboard data:', err.message);
@@ -361,7 +361,6 @@ app.get('/dashboard', async (req, res) => {
     res.status(500).render('error', { message: 'Error fetching dashboard data' });
   }
 });
-
 app.post('/save-transaction', async (req, res) => {
   try {
     const { user_email, user_name, plan, amount, status, userId, transaction_date } = req.body;
