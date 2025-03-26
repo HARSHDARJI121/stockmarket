@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - StockTrade</title>
     <style>
-        /* Styling remains the same */
         * {
             margin: 0;
             padding: 0;
@@ -115,6 +114,32 @@
 </head>
 <body>
     <div class="container">
+        <h2>All Users</h2>
+        <% if (users && users.length > 0) { %>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% users.forEach((user, index) => { %>
+                        <tr>
+                            <td><%= index + 1 %></td>
+                            <td><%= user.name %></td>
+                            <td><%= user.email %></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        <% } else { %>
+            <p>No users found</p>
+        <% } %>
+    </div>
+
+    <div class="container">
         <h2>All Transactions</h2>
         <% if (transactions && transactions.length > 0) { %>
             <table>
@@ -140,8 +165,8 @@
                             <td><%= transaction.plan %></td>
                             <td><%= transaction.amount %></td>
                             <td><%= transaction.status %></td>
-                            <td><%= transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString() : '<span style="color: red;">N/A</span>' %></td>
-                            <td><%= transaction.end_date ? new Date(transaction.end_date).toLocaleDateString() : '<span style="color: red;">N/A</span>' %></td>
+                            <td><%= formatDate(transaction.transaction_date) %></td> <!-- Updated field -->
+                            <td><%= transaction.end_date ? formatDate(transaction.end_date) : '<span style="color: red;">N/A</span>' %></td>
                             <td>
                                 <% if (transaction.status === 'pending') { %>
                                     <button onclick="acceptTransaction('<%= transaction.id %>')" class="accept">Accept</button>
@@ -160,7 +185,16 @@
             <p>No transactions found</p>
         <% } %>
     </div>
+
     <script>
+        // Format date for better readability
+        function formatDate(date) {
+            // Check if the date exists, if not, return the current date
+            const d = date ? new Date(date) : new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return d.toLocaleDateString('en-US', options);
+        }
+
         async function acceptTransaction(transactionId) {
             if (!transactionId) return alert('Invalid Transaction ID');
             try {

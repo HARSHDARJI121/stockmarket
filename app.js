@@ -102,32 +102,31 @@ app.get('/', (req, res) => {
   }
 });
 
-// Admin Page Route (Displays list of users and their subscription status)
 app.get('/admin', async (req, res) => {
   try {
-    // Fetch users from the MongoDB database using Mongoose model
-    const users = await User.find();  // This assumes 'User' is your Mongoose model
+    // Fetch all users and transactions
+    const users = await User.find(); 
+    const transactions = await Transaction.find();
 
-    // Fetch transactions from the MongoDB database using Mongoose model
-    const transactions = await Transaction.find();  // This assumes 'Transaction' is your Mongoose model
+    // Format the date function to convert transaction_date into a readable format
+    const formatDate = (date) => {
+      if (!date) return ''; // If no date, return empty string
+      const d = new Date(date);
+      return d.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    };
 
-    // Calculate remaining days for each user
-    users.forEach(user => {
-      const subscriptionStartDate = new Date(user.subscription_start_date); // Make sure subscription_start_date exists
-      const currentDate = new Date();
-      const daysPassed = Math.floor((currentDate - subscriptionStartDate) / (1000 * 60 * 60 * 24));
-      const remainingDays = user.plan_duration - daysPassed;
-
-      user.remainingDays = remainingDays > 0 ? remainingDays : 0;
-    });
-
-    // Render the 'admin' template with both users and transactions data
-    res.render('admin', { users, transactions });
+    // Pass users, transactions, and formatDate function to the EJS template
+    res.render('admin', { users, transactions, formatDate });
   } catch (err) {
-    console.error('Error fetching users and transactions:', err);
-    res.status(500).send('Server Error');
+    console.error('Error rendering admin page:', err);
+    res.status(500).render('error', { message: 'Error rendering admin page' });
   }
 });
+
 // Accept the transaction (promote user to premium)
 app.post('/signup', (req, res, next) => {
   if (userController.signup) {
