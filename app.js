@@ -11,7 +11,7 @@ const cron = require('node-cron');
 const { User, Transaction, AcceptedTransaction } = require('./models'); // Import models
 
 const app = express();
-const PORT = 3000;
+const PORT = 443; 
 
 // Add this check after requires
 if (!process.env.MONGO_URI) {
