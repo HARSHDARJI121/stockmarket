@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const User = require('../models/User');
 require('dotenv').config();
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/stocktrade';
+const MONGODB_URI = process.env.MONGO_URI ;
 
 async function setupDatabase() {
     try {

@@ -4,7 +4,7 @@ const User = require('../models/User');  // Assuming the User model is in the 'm
 const { body, validationResult } = require('express-validator'); // To validate inputs
 
 // Secret key for signing the JWT (use environment variable in production)
-const JWT_SECRET = process.env.JWT_SECRET || 'yourSecretKey'; // Store securely in production
+const JWT_SECRET = process.env.JWT_SECRET || 'fjbjibfwebj1234567890'; // Store securely in production
 
 // Signup validation middleware
 const validateSignup = [

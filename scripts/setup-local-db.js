@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 async function setupLocalDB() {
     try {
         // Try connecting to local MongoDB
-        const client = await MongoClient.connect('mongodb://localhost:27017', {
+        const client = await MongoClient.connect(process.env.MONGO_URI, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
             serverSelectionTimeoutMS: 5000
