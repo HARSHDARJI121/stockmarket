@@ -11,7 +11,7 @@ const cron = require('node-cron');
 const { User, Transaction, AcceptedTransaction } = require('./models'); // Import models
 
 const app = express();
-const PORT = 443; 
+const PORT = process.env.PORT || 3000; 
 
 // Add this check after requires
 if (!process.env.MONGO_URI) {
@@ -58,7 +58,7 @@ app.use(session({
   secret: process.env.SESSION,  
   resave: false,          // Don't resave sessions if no changes
   saveUninitialized: true, // Save sessions even if they are not modified
-  cookie: { secure: false } // For HTTP, set secure to false; for HTTPS, set it to true
+  cookie: { secure: true } // For HTTP, set secure to false; for HTTPS, set it to true
 }));
 
 // Set up EJS as the view engine
