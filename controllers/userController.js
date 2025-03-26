@@ -22,22 +22,33 @@ const validateSignup = [
 // Signup logic
 const signup = async (req, res) => {
     try {
+        console.log('Signup route hit'); // Debug statement
+        console.log('Request Body:', req.body); // Log incoming data
+
         // Run validation checks
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
+            console.log('Validation errors:', errors.array());
             return res.status(400).render('signup', { errors: errors.array() });
         }
 
         const { name, email, password } = req.body;
 
+        if (!name || !email || !password) {
+            console.log('Missing required fields');
+            return res.status(400).render('signup', { error: 'All fields are required' });
+        }
+
         // Check if the email already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
+            console.log(`Email already registered: ${email}`);
             return res.status(400).render('signup', { error: 'Email is already registered' });
         }
 
         // Hash the password before saving
         const hashedPassword = await bcrypt.hash(password, 10);
+        console.log('Password hashed successfully');
 
         // Create new user instance
         const user = new User({
@@ -47,15 +58,17 @@ const signup = async (req, res) => {
         });
 
         // Save user to the database
-        await user.save();
+        const savedUser = await user.save();
+        console.log('User saved successfully:', savedUser);
 
-        // Create a JWT token for the user (optional step)
-        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
+        // Create a JWT token for the user
+        const token = jwt.sign({ userId: savedUser._id }, JWT_SECRET, { expiresIn: '1h' });
+        console.log('JWT token created:', token);
 
-        // Store token in cookies (optional) for authenticated session
+        // Store token in cookies
         res.cookie('auth_token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
 
-        // Redirect to the login page after successful signup
+        console.log('Signup successful, redirecting to login');
         res.redirect('/login');
     } catch (error) {
         console.error('Error during signup:', error);
