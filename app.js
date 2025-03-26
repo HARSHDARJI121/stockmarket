@@ -9,6 +9,7 @@ const userController = require('./controllers/userController'); // Import the us
 const isAuthenticated = require('./controllers/auth'); // Authentication check
 const cron = require('node-cron');
 const { User, Transaction, AcceptedTransaction } = require('./models'); // Import models
+const MongoStore = require('connect-mongo');
 
 const app = express();
 const PORT = process.env.PORT || 3000; 
@@ -54,12 +55,23 @@ app.use(morgan('dev')); // Logs incoming requests
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public'))); // Serve static files (CSS, JS, images)
-app.use(session({
-  secret: process.env.SESSION,  
-  resave: false,          // Don't resave sessions if no changes
-  saveUninitialized: true, // Save sessions even if they are not modified
-  cookie: { secure: true } // For HTTP, set secure to false; for HTTPS, set it to true
-}));
+app.use(
+  session({
+    secret: process.env.SESSION || 'yourSecretKey', // Use a secure secret key
+    resave: false, // Don't save session if it hasn't been modified
+    saveUninitialized: false, // Don't create session until something is stored
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI, // Use your MongoDB URI
+      collectionName: 'sessions', // Name of the collection to store sessions
+    }),
+    cookie: {
+      secure: false, // Set to `true` if using HTTPS
+      httpOnly: true, // Prevent client-side JavaScript from accessing the cookie
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
+    },
+  })
+);
+
 
 // Set up EJS as the view engine
 app.set('view engine', 'ejs');
