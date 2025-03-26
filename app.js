@@ -354,7 +354,7 @@ app.get('/dashboard', async (req, res) => {
     }
 
     // Make sure 'dashboard' view is rendering properly with user data and transactions
-    res.render('dashboard', { user: req.session.user, transactions: rows });
+    res.render('Dashboard', { user: req.session.user, transactions: rows });
   } catch (err) {
     console.error('Error fetching dashboard data:', err.message);
     console.error(err.stack); // Log the full stack trace for debugging
