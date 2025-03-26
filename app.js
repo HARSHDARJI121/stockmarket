@@ -11,6 +11,7 @@ const cron = require('node-cron');
 const { User, Transaction, AcceptedTransaction } = require('./models'); // Import models
 const MongoStore = require('connect-mongo');
 const favicon = require('serve-favicon');
+const ADMIN_PASSWORD = 'Anarsh';
 
 const app = express();
 const PORT = process.env.PORT || 3000; 
@@ -50,6 +51,17 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send("Something went wrong!");
 });
+
+const passwordPromptMiddleware = (req, res, next) => {
+  // Check if the user has already entered the password
+  if (req.session && req.session.adminAuthenticated) {
+    return next(); // Proceed to the admin page if the password is correct
+  }
+
+  // If not authenticated, prompt for the password
+  res.render('passwordPrompt'); // You should create a 'passwordPrompt' EJS view where users enter the password
+};
+
 
 // Middleware setup
 app.use(morgan('dev')); // Logs incoming requests
@@ -102,10 +114,11 @@ app.get('/', (req, res) => {
   }
 });
 
-app.get('/admin', async (req, res) => {
+
+app.get('/admin', passwordPromptMiddleware, async (req, res) => {
   try {
     // Fetch all users and transactions
-    const users = await User.find(); 
+    const users = await User.find();
     const transactions = await Transaction.find();
 
     // Format the date function to convert transaction_date into a readable format
@@ -122,19 +135,28 @@ app.get('/admin', async (req, res) => {
     // Pass users, transactions, and formatDate function to the EJS template
     res.render('admin', { users, transactions, formatDate });
   } catch (err) {
-    console.error('Error rendering admin page:', err);
+    console.error('Error in /admin route:', err);
     res.status(500).render('error', { message: 'Error rendering admin page' });
   }
 });
 
-// Accept the transaction (promote user to premium)
-app.post('/signup', (req, res, next) => {
-  if (userController.signup) {
-    userController.signup(req, res, next);
-  } else {
-    next(new Error('Signup handler is missing in the userController.'));
+app.post('/admin', (req, res) => {
+  try {
+    const { password } = req.body; // Get password from the form input
+    
+    if (password === ADMIN_PASSWORD) {
+      req.session.adminAuthenticated = true; // Set session flag indicating authentication
+      return res.redirect('/admin'); // Redirect to the admin page after successful login
+    }
+
+    // If the password is incorrect, render the password prompt again with an error message
+    res.render('passwordPrompt', { error: 'Incorrect password. Please try again.' });
+  } catch (err) {
+    console.error('Error in /admin POST route:', err);
+    res.status(500).render('error', { message: 'Error during password validation' });
   }
 });
+
 
 // Transaction Page (Displays user-specific transaction data)
 app.get('/transaction', isAuthenticated, (req, res) => {
