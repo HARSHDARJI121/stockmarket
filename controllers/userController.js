@@ -71,9 +71,10 @@ const signup = async (req, res) => {
         console.log('Signup successful, redirecting to login');
         res.redirect('/login');
     } catch (error) {
-        console.error('Error during signup:', error);
-        return res.status(500).render('signup', { error: 'Server Error. Please try again later.' });
+        console.error('Error during signup:', error.message, error.stack); // Detailed error logging
+        return res.status(500).render('signup', { error: `Server Error: ${error.message}` });
     }
+    
 };
 
 // Login logic with JWT token

@@ -44,6 +44,11 @@ mongoose.connection.on('disconnected', () => {
     console.log('MongoDB disconnected');
 });
 
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send("Something went wrong!");
+});
+
 // Middleware setup
 app.use(morgan('dev')); // Logs incoming requests
 app.use(bodyParser.urlencoded({ extended: false }));

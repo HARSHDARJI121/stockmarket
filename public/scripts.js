@@ -1,50 +1,61 @@
 // Handle hamburger menu toggle
-document.getElementById('hamburger').addEventListener('click', function() {
-    document.getElementById('mobile-menu').style.display = 'block';
-});
+document.addEventListener("DOMContentLoaded", function () {
+    const hamburger = document.getElementById("hamburger");
+    const mobileMenu = document.getElementById("mobile-menu");
+    const closeMenu = document.getElementById("close-menu");
 
-// Handle close menu
-document.getElementById('close-menu').addEventListener('click', function() {
-    document.getElementById('mobile-menu').style.display = 'none';
-});
+    if (hamburger && mobileMenu) {
+        hamburger.addEventListener("click", function () {
+            mobileMenu.style.display = "block";
+        });
+    }
 
-// Wait until the document is ready to ensure the DOM is loaded
-document.addEventListener('DOMContentLoaded', function () {
-    const track = document.querySelector('.carousel-track');
-    const slides = Array.from(track.children);
-    const nextButton = document.querySelector('.carousel-button.right');
-    const prevButton = document.querySelector('.carousel-button.left');
-    
+    if (closeMenu && mobileMenu) {
+        closeMenu.addEventListener("click", function () {
+            mobileMenu.style.display = "none";
+        });
+    }
+
+    // Carousel functionality
+    const track = document.querySelector(".carousel-track");
+    const slides = track ? Array.from(track.children) : [];
+    const nextButton = document.querySelector(".carousel-button.right");
+    const prevButton = document.querySelector(".carousel-button.left");
+
     let currentIndex = 0;
     const totalSlides = slides.length;
-    const slideWidth = slides[0].offsetWidth; // Get width dynamically
+    
+    if (totalSlides > 0) {
+        const updateSlideWidth = () => slides[0].offsetWidth || 0;
+        let slideWidth = updateSlideWidth();
 
-    // Function to move slides
-    const moveToSlide = (index) => {
-        if (index >= totalSlides) {
-            currentIndex = 0; // Reset to first slide
-        } else if (index < 0) {
-            currentIndex = totalSlides - 1; // Go to last slide
-        } else {
-            currentIndex = index;
+        const moveToSlide = (index) => {
+            if (!track) return;
+            if (index >= totalSlides) {
+                currentIndex = 0;
+            } else if (index < 0) {
+                currentIndex = totalSlides - 1;
+            } else {
+                currentIndex = index;
+            }
+            track.style.transform = `translateX(-${slideWidth * currentIndex}px)`;
+        };
+
+        if (nextButton) {
+            nextButton.addEventListener("click", () => moveToSlide(currentIndex + 1));
         }
 
-        track.style.transform = `translateX(-${slideWidth * currentIndex}px)`;
-    };
+        if (prevButton) {
+            prevButton.addEventListener("click", () => moveToSlide(currentIndex - 1));
+        }
 
-    // Next Button
-    nextButton.addEventListener('click', () => {
-        moveToSlide(currentIndex + 1);
-    });
+        // Auto slide every 3 seconds
+        setInterval(() => moveToSlide(currentIndex + 1), 3000);
 
-    // Previous Button
-    prevButton.addEventListener('click', () => {
-        moveToSlide(currentIndex - 1);
-    });
-
-    // Auto slide every 3 seconds
-    setInterval(() => {
-        moveToSlide(currentIndex + 1);
-    }, 3000);
+        // Update slide width on window resize (for responsiveness)
+        window.addEventListener("resize", () => {
+            slideWidth = updateSlideWidth();
+            moveToSlide(currentIndex);
+        });
+    }
 });
-
