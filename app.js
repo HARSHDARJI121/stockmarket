@@ -10,6 +10,7 @@ const isAuthenticated = require('./controllers/auth'); // Authentication check
 const cron = require('node-cron');
 const { User, Transaction, AcceptedTransaction } = require('./models'); // Import models
 const MongoStore = require('connect-mongo');
+const favicon = require('serve-favicon');
 
 const app = express();
 const PORT = process.env.PORT || 3000; 
@@ -72,6 +73,8 @@ app.use(
   })
 );
 
+// Serve the favicon
+app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
 // Set up EJS as the view engine
 app.set('view engine', 'ejs');
@@ -348,13 +351,14 @@ app.get('/dashboard', async (req, res) => {
     // Fetch transactions for the logged-in user
     const rows = await AcceptedTransaction.find({ email: userEmail });
 
-    if (rows.length === 0) {
+    if (!rows || rows.length === 0) {
       console.log('No transactions found for user:', userEmail);
     }
 
     res.render('dashboard', { user: req.session.user, transactions: rows });
   } catch (err) {
-    console.error('Error fetching dashboard data:', err);
+    console.error('Error fetching dashboard data:', err.message);
+    console.error(err.stack); // Log the full stack trace for debugging
     res.status(500).render('error', { message: 'Error fetching dashboard data' });
   }
 });
