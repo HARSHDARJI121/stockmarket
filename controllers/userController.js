@@ -79,35 +79,62 @@ const signup = async (req, res) => {
 
 // Login logic with JWT token
 const login = async (req, res) => {
+    // Validation chain for email and password
+    await body('email').isEmail().withMessage('Please enter a valid email').run(req);
+    await body('password').notEmpty().withMessage('Password is required').run(req);
+
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).render('login', { 
+            errors: errors.array(),
+            email: req.body.email,
+        });
+    }
+
     const { email, password } = req.body;
 
     try {
-        // Check if the user exists
+        // Check if the user exists by email
         const user = await User.findOne({ email });
 
         if (!user) {
-            return res.status(400).render('login', { error: 'User not found' });
+            // User does not exist
+            return res.status(400).render('login', { 
+                error: 'User not found',
+                email
+            });
         }
 
-        // Compare the entered password with the hashed password in the database
+        // Compare entered password with hashed password stored in database
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
-            return res.status(400).render('login', { error: 'Incorrect password' });
+            // Passwords don't match
+            return res.status(400).render('login', { 
+                error: 'Incorrect password', 
+                email
+            });
         }
 
-        // Store user data in session
+        // Create a session object with the user's information
         req.session.user = {
             id: user._id,
             email: user.email,
             name: user.name,
         };
 
-        // Redirect to dashboard or home page
+        // Optionally: Save the session or set a cookie manually if needed
+        // req.session.save((err) => {
+        //     if (err) return res.status(500).render('error', { message: 'Session save error' });
+        //     res.redirect('/');
+        // });
+
+        // Redirect to dashboard or home page after successful login
         res.redirect('/');
     } catch (err) {
         console.error(err);
-        res.status(500).render('error', { message: 'Server error during login' });
+        return res.status(500).render('error', { message: 'Server error during login' });
     }
 };
 
