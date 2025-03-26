@@ -333,14 +333,23 @@ app.delete('/admin/delete-transaction/:id', async (req, res) => {
 // Dashboard Route
 app.get('/dashboard', async (req, res) => {
   if (!req.session.user) {
+    console.error('User session not found. Redirecting to login.');
     return res.redirect('/login');
   }
 
   try {
-    const rows = await AcceptedTransaction.find({ email: req.session.user.email });
+    const userEmail = req.session.user.email;
+
+    if (!userEmail) {
+      console.error('User email not found in session.');
+      return res.status(400).render('error', { message: 'User email is missing in session.' });
+    }
+
+    // Fetch transactions for the logged-in user
+    const rows = await AcceptedTransaction.find({ email: userEmail });
 
     if (rows.length === 0) {
-      console.log('No transactions found for user:', req.session.user.email);
+      console.log('No transactions found for user:', userEmail);
     }
 
     res.render('dashboard', { user: req.session.user, transactions: rows });
