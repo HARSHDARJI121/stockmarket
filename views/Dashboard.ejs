@@ -28,6 +28,7 @@
             padding: 30px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             text-align: center;
+            position: relative;
         }
 
         h1 {
@@ -95,9 +96,29 @@
             font-weight: bold;
             margin-top: 20px;
         }
+        
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            color: #ffeb3b;
+            cursor: pointer;
+            background: none;
+            border: none;
+            outline: none;
+        }
+
+        .back-button:hover {
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
+
+    <!-- Back Button -->
+    <button class="back-button" onclick="goBack()">⬅ Back</button>
+
 
     <div class="container">
         <h1>Welcome, <%= user.name %> 🎉</h1>
@@ -151,10 +172,12 @@
         </div>
     </div>
 
+    <script>
+         document.querySelector('.back-button').addEventListener('click', function () {
+        window.location.href = "/";
+    });
+
+    </script>
+
 </body>
 </html>
-
-
-
-
-
