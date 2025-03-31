@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
@@ -29,6 +30,12 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             text-align: center;
             position: relative;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .container:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         }
 
         h1 {
@@ -65,17 +72,21 @@
 
         .progress-container {
             width: 100%;
-            height: 12px;
+            height: 20px;
             background: #34495e;
             border-radius: 10px;
             overflow: hidden;
             margin-top: 15px;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .progress-bar {
             height: 100%;
             border-radius: 10px;
-            transition: width 0.5s ease, background-color 0.5s ease;
+            background: linear-gradient(to right, #4caf50, #8bc34a);
+            transition: width 1s ease, background-color 1s ease;
+            position: relative;
         }
 
         .status {
@@ -96,7 +107,7 @@
             font-weight: bold;
             margin-top: 20px;
         }
-        
+
         .back-button {
             position: absolute;
             top: 20px;
@@ -112,13 +123,28 @@
         .back-button:hover {
             color: #ffffff;
         }
+
+        /* Media Query for Responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .transaction-card {
+                padding: 15px;
+            }
+        }
     </style>
 </head>
+
 <body>
 
     <!-- Back Button -->
     <button class="back-button" onclick="goBack()">⬅ Back</button>
-
 
     <div class="container">
         <h1>Welcome, <%= user.name %> 🎉</h1>
@@ -133,7 +159,6 @@
                         let startDate = new Date(transaction.start_date);
                         let endDate = new Date(transaction.end_date);
                         let currentDate = new Date();
-
                         let totalDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
                         let daysPassed = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24));
 
@@ -141,7 +166,7 @@
                         if (daysPassed > totalDays) daysPassed = totalDays;
 
                         let progressPercentage = totalDays > 0 ? Math.min(100, (daysPassed / totalDays) * 100) : 0;
-                        let progressColor = progressPercentage >= 70 ? '#4caf50' : '#f5a623'; 
+                        let progressColor = progressPercentage >= 70 ? '#4caf50' : '#f5a623';
 
                         let planExpired = currentDate.toDateString() === endDate.toDateString() || currentDate > endDate;
                     %>
@@ -154,13 +179,14 @@
 
                         <% if (!planExpired) { %>
                             <div class="progress-container">
-                                <div class="progress-bar" style="width: <%= progressPercentage %>%; background-color: <%= progressColor %>;"></div>
+                                <div class="progress-bar" style="width: <%= progressPercentage %>%;"></div>
                             </div>
                             <p class="status">Status: <%= transaction.status %></p>
                         <% } else { %>
                             <p class="status expired-status">Your plan has expired ❌</p>
                         <% } %>
                     </div>
+
                 <% }) %>
             <% } else { %>
                 <p class="no-transactions">No accepted transactions yet 🚀</p>
@@ -173,11 +199,33 @@
     </div>
 
     <script>
-         document.querySelector('.back-button').addEventListener('click', function () {
-        window.location.href = "/";
-    });
+        document.querySelector('.back-button').addEventListener('click', function () {
+            window.location.href = "/";
+        });
 
+        // Calculate progress when the page is loaded
+        document.addEventListener('DOMContentLoaded', function () {
+            // Update the progress every minute (or whatever interval you prefer)
+            setInterval(updateProgressBars, 60000); // 60000ms = 1 minute
+    
+            // Function to calculate and update the progress bars
+            function updateProgressBars() {
+                const progressBars = document.querySelectorAll('.progress-bar');
+                
+                progressBars.forEach(bar => {
+                    // Get the transaction data from the element's attributes
+                    const totalDays = parseInt(bar.getAttribute('data-total-days'));
+                    const daysPassed = parseInt(bar.getAttribute('data-days-passed'));
+                    const progressPercentage = Math.min(100, (daysPassed / totalDays) * 100);
+    
+                    // Update the progress bar width and color
+                    bar.style.width = `${progressPercentage}%`;
+                    bar.style.backgroundColor = progressPercentage >= 70 ? '#4caf50' : '#f5a623';
+                });
+            }
+        });
     </script>
 
 </body>
+
 </html>
