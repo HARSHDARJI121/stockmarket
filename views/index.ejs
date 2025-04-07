@@ -1,32 +1,36 @@
 <%- include('layout') %>
 
-
 <head>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <title>StockTrade</title>
 </head>
-<h1 style="color: blue; text-align: center;">Welcome to StockTrade!</h1>
-<p style="color: blue; text-align: center;">Trade stocks easily and securely.</p>
 
-<div class="container1">
-    <h2>All Messages</h2>
-    <% if (messages && messages.length > 0) { %>
-        <ul class="messages-list">
-            <% messages.forEach((message) => { %>
-                <li class="message-item">
-                    <p class="message-content"><%= message.content %></p>
-                    <small class="message-date">
-                        Posted on <%= new Date(message.createdAt).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) %>
-                    </small>
-                </li>
-            <% }); %>
-        </ul>
-    <% } else { %>
-        <p class="no-messages">No messages available.</p>
-    <% } %>
-</div>
+<body>
+    <h1 style="color: blue; text-align: center;">Welcome to StockTrade!</h1>
+    <p style="color: blue; text-align: center;">Trade stocks easily and securely.</p>
+
+    <div class="container1">
+        <h2>All Messages</h2>
+        <% if (messages && messages.length > 0) { %>
+            <ul class="messages-list">
+                <% messages.forEach((message) => { %>
+                    <li class="message-item">
+                        <p class="message-content"><%= message.content %></p>
+                        <small class="message-date">
+                            Posted on <%= new Date(message.createdAt).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %> 
+                            at <%= new Date(message.createdAt).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) %>
+                        </small>
+                    </li>
+                <% }); %>
+            </ul>
+        <% } else { %>
+            <p class="no-messages">No messages available.</p>
+        <% } %>
+    </div>
+</body>
+
 
 <!-- Carousel Section -->
 <div class="carousel">
