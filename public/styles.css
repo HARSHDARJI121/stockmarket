@@ -5,16 +5,202 @@ body {
     background-color: rgb(167, 222, 241);
     
 }
+/* General Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-/* Navbar styles */
+/* Body and Global Styles */
+body {
+    font-family: 'Helvetica Neue', sans-serif;
+    background-color: #ffffff;
+    color: #333333;
+    line-height: 1.6;
+    padding: 0;
+    margin: 0;
+}
+
+/* Navbar Styling */
 .navbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 20px;
-    background-color: #2c3e50;
+    background-color: #00264d; /* Dark Blue */
+    padding: 20px 30px;
+}
+
+.logo-name {
+    display: flex;
+    align-items: center;
+}
+
+.logo {
+    width: 40px;
+    height: auto;
+    margin-right: 10px;
+}
+
+.brand-name {
+    font-size: 24px;
+    font-weight: 600;
+    color: #FFD700; /* Gold accent */
+    letter-spacing: 1px;
+}
+
+.menu {
+    display: flex;
+    align-items: center;
+}
+
+.menu-items {
+    list-style: none;
+    display: flex;
+    gap: 20px;
+}
+
+.menu-items li a {
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 10px 15px;
+    transition: all 0.3s ease;
+}
+
+.menu-items li a:hover {
+    color: #FFD700; /* Gold on hover */
+    background-color: #001f33; /* Dark blue background for hover */
+    border-radius: 4px;
+}
+
+/* Hamburger Menu */
+.hamburger {
+    display: none;
+    cursor: pointer;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.hamburger span {
+    width: 25px;
+    height: 3px;
+    background-color: #ffffff;
+    border-radius: 5px;
+}
+
+/* Mobile Menu */
+.mobile-menu {
+    display: none;
+    background-color: #00264d;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+}
+
+.mobile-menu ul {
+    list-style: none;
+    text-align: center;
+}
+
+.mobile-menu ul li a {
+    display: block;
+    padding: 15px;
+    color: #FFD700; /* Gold accent */
+    text-decoration: none;
+    font-size: 20px;
+}
+
+.mobile-menu ul li a:hover {
+    color: #ffffff;
+    background-color: #001f33; /* Dark blue on hover */
+}
+
+#close-menu {
+    color: #FFD700;
+    font-size: 24px;
+    text-decoration: none;
+}
+
+/* Fullscreen Hero Section (Optional) */
+.hero {
+    position: relative;
+    height: 100vh;
+    background-image: url('path-to-hero-image.jpg');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
     color: white;
 }
+
+.hero h1 {
+    font-size: 48px;
+    font-weight: 700;
+    color: #FFD700;
+    animation: fadeIn 2s ease-in-out;
+}
+
+.hero p {
+    font-size: 20px;
+    font-weight: 300;
+    margin-top: 10px;
+    color: #ffffff;
+    animation: fadeIn 3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+/* Button Hover Effects */
+.btn {
+    display: inline-block;
+    background-color: #FFD700;
+    color: #00264d;
+    text-decoration: none;
+    padding: 12px 24px;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #ffcc00;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Media Query for Mobile */
+@media (max-width: 768px) {
+    .menu-items {
+        display: none;
+    }
+
+    .hamburger {
+        display: flex;
+    }
+
+    .mobile-menu {
+        display: flex;
+    }
+
+    .menu-items li {
+        display: block;
+        margin-bottom: 20px;
+    }
+}
+
+
+/* Navbar styles */
+
 
 /* Logo and Name */
 .logo-name {
@@ -109,7 +295,10 @@ body {
     .hamburger {
         display: flex;
     }
+    
 }
+
+
 /* Container for the image slider */
 /* Image slider styles */
 /* General Styles */
@@ -312,10 +501,7 @@ body {
     .about-section p {
         font-size: 16px;
     }
-    .navbar{
-        width: 335px;
-            
-    }
+    
 }
 
 /* Contact Section */
