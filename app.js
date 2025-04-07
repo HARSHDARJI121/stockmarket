@@ -12,6 +12,7 @@ const MongoStore = require('connect-mongo');
 const favicon = require('serve-favicon');
 const Message = require('./models/Message'); // Import the Message model
 const { User, Transaction, AcceptedTransaction } = require('./models'); // Import other models
+const moment = require('moment-timezone');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -104,7 +105,7 @@ app.get('/', async (req, res) => {
     const messages = await Message.find().sort({ createdAt: -1 });
 
     // Pass the messages and images to the view
-    res.render('index', { images, messages });
+    res.render('index', { images, messages, moment });
   } catch (error) {
     console.error('Error rendering index:', error);
     res.status(500).render('error', { message: 'Internal Server Error' });
