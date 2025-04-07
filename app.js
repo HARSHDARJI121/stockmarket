@@ -8,67 +8,59 @@ const mongoose = require('mongoose'); // MongoDB ORM
 const userController = require('./controllers/userController'); // Import the user controller
 const isAuthenticated = require('./controllers/auth'); // Authentication check
 const cron = require('node-cron');
-const { User, Transaction, AcceptedTransaction } = require('./models'); // Import models
 const MongoStore = require('connect-mongo');
 const favicon = require('serve-favicon');
-
+const Message = require('./models/Message'); // Import the Message model
+const { User, Transaction, AcceptedTransaction } = require('./models'); // Import other models
 
 const app = express();
-const PORT = process.env.PORT || 3000; 
+const PORT = process.env.PORT || 3000;
 
-// Add this check after requires
+// Check for MongoDB URI in environment variables
 if (!process.env.MONGO_URI) {
-    console.error('MONGO_URI is not defined in .env file');
-    process.exit(1);
+  console.error('MONGO_URI is not defined in .env file');
+  process.exit(1);
 }
 
-// Update your MongoDB connection
+// MongoDB connection
 mongoose.connect(process.env.MONGO_URI, {
-    serverSelectionTimeoutMS: 30000, // Increase timeout to 30 seconds
-    socketTimeoutMS: 45000, // How long to wait for responses from MongoDB
-    connectTimeoutMS: 30000, // How long to wait for initial connection
+  serverSelectionTimeoutMS: 30000,
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 30000,
 })
-.then(() => {
+  .then(() => {
     console.log('MongoDB connection successful!');
-})
-.catch((err) => {
+  })
+  .catch((err) => {
     console.error('MongoDB connection error:', err);
-    // Don't exit the process, just log the error
     console.log('Please check your MongoDB Atlas configuration and network connection');
-});
+  });
 
-// Add connection error handler
+// MongoDB error and disconnection handlers
 mongoose.connection.on('error', (err) => {
-    console.error('MongoDB connection error:', err);
+  console.error('MongoDB connection error:', err);
 });
-
-// Add disconnection handler
 mongoose.connection.on('disconnected', () => {
-    console.log('MongoDB disconnected');
-});
-
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send("Something went wrong!");
+  console.log('MongoDB disconnected');
 });
 
 // Middleware setup
 app.use(morgan('dev')); // Logs incoming requests
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public'))); // Serve static files (CSS, JS, images)
+app.use(express.static(path.join(__dirname, 'public'))); // Serve static files
 app.use(
   session({
-    secret: process.env.SESSION || 'yourSecretKey', // Use a secure secret key
-    resave: false, // Don't save session if it hasn't been modified
-    saveUninitialized: false, // Don't create session until something is stored
+    secret: process.env.SESSION || 'yourSecretKey',
+    resave: false,
+    saveUninitialized: false,
     store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI, // Use your MongoDB URI
-      collectionName: 'sessions', // Name of the collection to store sessions
+      mongoUrl: process.env.MONGO_URI,
+      collectionName: 'sessions',
     }),
     cookie: {
       secure: false, // Set to `true` if using HTTPS
-      httpOnly: true, // Prevent client-side JavaScript from accessing the cookie
+      httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     },
   })
@@ -79,23 +71,26 @@ app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
 // Set up EJS as the view engine
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views')); // Directory for EJS views
+app.set('views', path.join(__dirname, 'views'));
 
-// Middleware to make `user` available in all views if the user is logged in
+// Middleware to make `user` available in all views
 app.use((req, res, next) => {
-  res.locals.user = req.session.user || null; // Makes `user` available in all views
+  res.locals.user = req.session.user || null;
   next();
 });
+
+// Password prompt middleware for admin
 const passwordPromptMiddleware = (req, res, next) => {
-  const password = process.env.ADMIN_PASSWORD || 'defaultPassword'; // Get password from environment variable
+  const password = process.env.ADMIN_PASSWORD || 'defaultPassword';
   if (!req.session.isAdmin) {
-      res.render('passwordPrompt'); // Show password prompt page if not authenticated
+    res.render('passwordPrompt');
   } else {
-      next(); // Proceed if password is correct
+    next();
   }
 };
+
 // Routes
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
   try {
     const images = [
       'https://static.vecteezy.com/system/resources/previews/025/481/738/large_2x/bull-with-background-of-uptrend-stock-market-concept-of-bullish-market-ai-generated-free-photo.jpeg',
@@ -104,58 +99,110 @@ app.get('/', (req, res) => {
       'https://cdn.futura-sciences.com/sources/images/cours%20trading.jpeg',
       'https://img.freepik.com/premium-photo/investment-trading-background-with-bar-charts_1200-1408.jpg?w=2000',
     ];
-    res.render('index', { images });
+
+    // Fetch all messages from the database
+    const messages = await Message.find().sort({ createdAt: -1 });
+
+    // Pass the messages and images to the view
+    res.render('index', { images, messages });
   } catch (error) {
     console.error('Error rendering index:', error);
     res.status(500).render('error', { message: 'Internal Server Error' });
   }
 });
+
 app.post('/admin', (req, res) => {
   const { password } = req.body;
   if (password === process.env.ADMIN_PASSWORD) {
-      req.session.isAdmin = true; // Set session variable to indicate admin access
-      res.redirect('/admin'); // Redirect to admin page
+    req.session.isAdmin = true;
+    res.redirect('/admin');
   } else {
-      res.render('passwordPrompt', { error: 'Incorrect password. Please try again.' });
+    res.render('passwordPrompt', { error: 'Incorrect password. Please try again.' });
   }
 });
 
 app.get('/admin', passwordPromptMiddleware, async (req, res) => {
   try {
-      // Fetch all users and transactions
-      const users = await User.find(); 
-      const transactions = await Transaction.find();
+    const users = await User.find(); // Fetch all users
+    const transactions = await Transaction.find(); // Fetch all transactions
+    const messages = await Message.find().sort({ createdAt: -1 }); // Fetch all messages
 
-      // Format the date function to convert transaction_date into a readable format
-      const formatDate = (date) => {
-          if (!date) return ''; // If no date, return empty string
-          const d = new Date(date);
-          return d.toLocaleDateString('en-US', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-          });
-      };
-
-      // Pass users, transactions, and formatDate function to the EJS template
-      res.render('admin', { users, transactions, formatDate });
+    // Pass users, transactions, and messages to the admin view
+    res.render('admin', { users, transactions, messages });
   } catch (err) {
-      console.error('Error rendering admin page:', err);
-      res.status(500).render('error', { message: 'Error rendering admin page' });
+    console.error('Error rendering admin page:', err);
+    res.status(500).render('error', { message: 'Error rendering admin page' });
   }
 });
 
+// Handle message submission
+app.post('/send-message', async (req, res) => {
+  try {
+    const { message } = req.body;
 
+    if (!message) {
+      return res.status(400).json({ message: 'Message cannot be empty!' });
+    }
 
-// Accept the transaction (promote user to premium)
-app.post('/signup', (req, res, next) => {
-  if (userController.signup) {
-    userController.signup(req, res, next);
+    // Save the message to the database
+    await Message.create({ content: message });
+
+    res.redirect('/admin'); 
+  } catch (error) {
+    console.error('Error saving message:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Route to delete a message
+app.delete('/delete-message/:id', async (req, res) => {
+  try {
+    const messageId = req.params.id;
+
+    // Delete the message from the database
+    const result = await Message.findByIdAndDelete(messageId);
+
+    if (!result) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    res.status(200).json({ message: 'Message deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Other routes (e.g., login, signup, transactions, etc.)
+app.get('/login', (req, res) => {
+  res.render('login');
+});
+
+app.get('/signup', (req, res) => {
+  res.render('signup');
+});
+
+app.post('/signup', userController.signup);
+app.post('/login', userController.login);
+
+app.get('/forgot-password', (req, res) => {
+  res.render('forgot-password');
+});
+
+app.post('/forgot-password', userController.forgotPassword);
+
+app.get('/logout', (req, res, next) => {
+  if (req.session.user) {
+    req.session.destroy((err) => {
+      if (err) {
+        return next(err);
+      }
+      res.redirect('/');
+    });
   } else {
-    next(new Error('Signup handler is missing in the userController.'));
+    res.redirect('/');
   }
 });
-
 // Transaction Page (Displays user-specific transaction data)
 app.get('/transaction', isAuthenticated, (req, res) => {
   const userEmail = req.session.userEmail;

@@ -23,6 +23,21 @@
 <div class="images-trade">
     <img src="/images/stock.jpg" alt="Trading Image">
 </div>
+<div class="container1">
+    <h2>All Messages</h2>
+    <% if (messages && messages.length > 0) { %>
+        <ul class="messages-list">
+            <% messages.forEach((message) => { %>
+                <li class="message-item">
+                    <p class="message-content"><%= message.content %></p>
+                    <small class="message-date">Posted on <%= new Date(message.createdAt).toLocaleString() %></small>
+                </li>
+            <% }); %>
+        </ul>
+    <% } else { %>
+        <p class="no-messages">No messages available.</p>
+    <% } %>
+</div>
 
 <!-- About Section -->
 <section class="about-section">
