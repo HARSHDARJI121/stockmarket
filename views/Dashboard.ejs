@@ -127,7 +127,7 @@
         /* Media Query for Responsiveness */
         @media (max-width: 768px) {
             .container {
-                padding: 20px;
+                padding: 2px;
             }
 
             h1 {
@@ -172,19 +172,26 @@
                     %>
 
                     <div class="transaction-card">
-                        <h3>Plan: <%= transaction.plan %></h3>
-                        <p>Amount: ₹<%= transaction.amount %></p>
-                        <p>Start Date: <%= new Date(transaction.start_date).toLocaleDateString() %></p>
-                        <p>End Date: <%= new Date(transaction.end_date).toLocaleDateString() %></p>
-
+                        <h3>Plan: <%= transaction.plan %>
+                        </h3>
+                        <p>Amount: ₹<%= transaction.amount %>
+                        </p>
+                        <p>Start Date: <%= new Date(transaction.start_date).toLocaleDateString() %>
+                        </p>
+                        <p>End Date: <%= new Date(transaction.end_date).toLocaleDateString() %>
+                        </p>
+                    
                         <% if (!planExpired) { %>
                             <div class="progress-container">
-                                <div class="progress-bar" style="width: <%= progressPercentage %>%;"></div>
+                                <div class="progress-bar" style="width: <%= progressPercentage %>%;" data-total-days="<%= totalDays %>"
+                                    data-days-passed="<%= daysPassed %>">
+                                </div>
                             </div>
-                            <p class="status">Status: <%= transaction.status %></p>
-                        <% } else { %>
-                            <p class="status expired-status">Your plan has expired ❌</p>
-                        <% } %>
+                            <p class="status">Status: <%= transaction.status %>
+                            </p>
+                            <% } else { %>
+                                <p class="status expired-status">Your plan has expired ❌</p>
+                                <% } %>
                     </div>
 
                 <% }) %>
@@ -197,35 +204,46 @@
             <% } %>
         </div>
     </div>
-
     <script>
         document.querySelector('.back-button').addEventListener('click', function () {
             window.location.href = "/";
         });
-
+    
         // Calculate progress when the page is loaded
         document.addEventListener('DOMContentLoaded', function () {
             // Update the progress every minute (or whatever interval you prefer)
             setInterval(updateProgressBars, 60000); // 60000ms = 1 minute
-    
+        
             // Function to calculate and update the progress bars
             function updateProgressBars() {
                 const progressBars = document.querySelectorAll('.progress-bar');
                 
                 progressBars.forEach(bar => {
                     // Get the transaction data from the element's attributes
-                    const totalDays = parseInt(bar.getAttribute('data-total-days'));
-                    const daysPassed = parseInt(bar.getAttribute('data-days-passed'));
-                    const progressPercentage = Math.min(100, (daysPassed / totalDays) * 100);
+                    const startDate = new Date(bar.getAttribute('data-start-date'));
+                    const endDate = new Date(bar.getAttribute('data-end-date'));
+                    const currentDate = new Date();
+                    
+                    const totalDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+                    const daysPassed = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24));
+                    
+                    // Handle case if dates are invalid
+                    if (isNaN(startDate) || isNaN(endDate)) return;
+    
+                    // Make sure daysPassed does not exceed totalDays
+                    const validDaysPassed = Math.min(daysPassed, totalDays);
+                    const progressPercentage = Math.min(100, (validDaysPassed / totalDays) * 100);
     
                     // Update the progress bar width and color
                     bar.style.width = `${progressPercentage}%`;
                     bar.style.backgroundColor = progressPercentage >= 70 ? '#4caf50' : '#f5a623';
                 });
             }
+    
+            // Initial call to set the progress bar when the page loads
+            updateProgressBars();
         });
     </script>
-
 </body>
 
 </html>

@@ -196,6 +196,9 @@ body {
         display: block;
         margin-bottom: 20px;
     }
+    .navbar{
+        gap: 40px;
+    }
 }
 
 

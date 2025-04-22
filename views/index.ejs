@@ -12,7 +12,7 @@
     <p style="color: blue; text-align: center;">Trade stocks easily and securely.</p>
 
     <div class="container1">
-        <h2>All Messages</h2>
+        <h2>News</h2>
         <% if (messages && messages.length > 0) { %>
             <ul class="messages-list">
                 <% messages.forEach((message) => { %>
@@ -37,14 +37,22 @@
 <!-- Carousel Section -->
 <div class="carousel">
     <div class="carousel-track">
-        <% images.forEach(function(image) { %>
-            <div class="carousel-slide">
-                <img src="<%= image %>" alt="Trading Image">
-            </div>
-        <% }); %>
+        <div class="carousel-slide">
+            <img src="../public/images/img1.jpeg">
+        </div>
+        <div class="carousel-slide">
+            <img src="../public/images/img2.jpg">
+        </div>
+        <div class="carousel-slide">
+            <img src="../public/images/img3.jpg">
+        </div>
+        <div class="carousel-slide">
+            <img src="../public/images/img4.jpeg">
+        </div>
+        <div class="carousel-slide">
+            <img src="../public/images/img5.avif">
+        </div>
     </div>
-    <button class="carousel-button left">&lt;</button>
-    <button class="carousel-button right">&gt;</button>
 </div>
 
 <!-- Trading Image Section -->
@@ -74,8 +82,8 @@
         <p>Premium plan for one month <br>Get accurate stock market insights</p>
         <p style="color: rgb(113, 48, 232);">----</p>
         <button class="plan-button">
-            <!-- <a href="/transaction?plan=standard" style="color: aliceblue;">Get Started</a> -->
-            Get Started
+            <a href="/transaction?plan=standard" style="color: aliceblue;">Get Started</a>
+           
         </button>
     </div>
     <div class="plan">
@@ -83,8 +91,7 @@
         <p>Premium plan for three months <br>Advanced stock trading analysis</p>
         <p style="color: red;">----</p>
         <button class="plan-button">
-            <!-- <a href="/transaction?plan=premium" style="color: aliceblue;">Get Started</a> -->
-             Get Started
+            <a href="/transaction?plan=premium" style="color: aliceblue;">Get Started</a>
         </button>
     </div>
 </div>

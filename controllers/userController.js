@@ -255,3 +255,8 @@ module.exports = { signup, login, forgotPassword, getDashboard, logout, saveTran
 
 
 
+
+
+
+// are databse me reset toke dala hai tabel per user jaise hi user forgot password pe click karta hai to forgot password page me send kart hai mail me and fir reset token generate hota hai fir api se wo token ko featch karker naya pasword banat sakta hai samja 
+// uska logic kha hai 

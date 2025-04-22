@@ -13,6 +13,12 @@ const favicon = require('serve-favicon');
 const Message = require('./models/Message'); // Import the Message model
 const { User, Transaction, AcceptedTransaction } = require('./models'); // Import other models
 const moment = require('moment-timezone');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto'); 
+const ExcelJS = require('exceljs');
+const transporter = require('./utils/email');
+const helmet = require('helmet');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,6 +56,7 @@ app.use(morgan('dev')); // Logs incoming requests
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public'))); // Serve static files
+app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use(
   session({
     secret: process.env.SESSION || 'yourSecretKey',
@@ -67,6 +74,48 @@ app.use(
   })
 );
 
+app.use(
+  helmet.contentSecurityPolicy({
+    useDefaults: true,
+    directives: {
+      "default-src": ["'self'"],
+      "script-src": ["'self'", "'unsafe-inline'", "blob:"],
+      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      "font-src": ["'self'", "https://fonts.gstatic.com"],
+      "img-src": [
+        "'self'",
+        "data:",
+        "https://static.vecteezy.com",
+        "https://eclubs.ir",
+        "https://i.pinimg.com",
+        "https://cdn.futura-sciences.com",
+        "https://img.freepik.com",
+      ],
+      "connect-src": ["'self'"],
+    },
+  })
+);
+
+// Example handler to catch the violations:
+app.post('/csp-violation-report-endpoint', express.json(), (req, res) => {
+  console.log('CSP Violation:', req.body);
+  res.status(204).end(); // Return a no-content response
+});
+
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' blob:; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src https://fonts.gstatic.com; " +
+    "img-src 'self' data:; " +
+    "connect-src 'self';"
+  );
+  next();
+});
+
+
 // Serve the favicon
 app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
@@ -79,6 +128,19 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   next();
 });
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' blob:; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src https://fonts.gstatic.com; " +
+    "img-src 'self' data:; " +
+    "connect-src 'self';"
+  );
+  next();
+});
+
 
 // Password prompt middleware for admin
 const passwordPromptMiddleware = (req, res, next) => {
@@ -187,7 +249,7 @@ app.post('/signup', userController.signup);
 app.post('/login', userController.login);
 
 app.get('/forgot-password', (req, res) => {
-  res.render('forgot-password');
+  res.render('forgot-password', { successMessage: null }); // Pass successMessage as null initially
 });
 
 app.post('/forgot-password', userController.forgotPassword);
@@ -421,14 +483,46 @@ app.get('/dashboard', async (req, res) => {
       console.log('No transactions found for user:', userEmail);
     }
 
-    // Make sure 'dashboard' view is rendering properly with user data and transactions
-    res.render('Dashboard', { user: req.session.user, transactions: rows });
+    // Map through transactions to calculate progress data
+    const transactions = rows.map(transaction => {
+      let startDate = new Date(transaction.start_date);
+      let endDate = new Date(transaction.end_date);
+      let currentDate = new Date();
+
+      // Calculate total days of the plan
+      let totalDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+      
+      // Calculate days passed
+      let daysPassed = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24));
+
+      // Handle edge cases where the dates might be invalid
+      if (isNaN(startDate) || isNaN(endDate)) totalDays = 0;
+      if (daysPassed > totalDays) daysPassed = totalDays;
+
+      // Calculate progress percentage (0 - 100%)
+      let progressPercentage = totalDays > 0 ? Math.min(100, (daysPassed / totalDays) * 100) : 0;
+
+      // Determine if the plan is expired
+      let planExpired = currentDate.toDateString() === endDate.toDateString() || currentDate > endDate;
+
+      return {
+        ...transaction.toObject(), // If using mongoose, toObject() will convert the transaction to a plain object
+        totalDays,
+        daysPassed,
+        progressPercentage,
+        planExpired
+      };
+    });
+
+    // Render the dashboard view and pass user and transactions data to the template
+    res.render('Dashboard', { user: req.session.user, transactions });
   } catch (err) {
     console.error('Error fetching dashboard data:', err.message);
     console.error(err.stack); // Log the full stack trace for debugging
     res.status(500).render('error', { message: 'Error fetching dashboard data' });
   }
 });
+
 app.post('/save-transaction', async (req, res) => {
   try {
     const { user_email, user_name, plan, amount, status, userId, transaction_date } = req.body;
@@ -489,9 +583,9 @@ app.post('/signup', userController.signup);
 app.post('/login', userController.login);
 
 // Forgot password route
-app.get('/forgot-password', (req, res) => {
-  res.render('forgot-password');
-});
+// app.get('/forgot-password', (req, res) => {
+//   res.render('forgot-password', { successMessage: null }); // Pass successMessage as null initially
+// });
 
 app.post('/forgot-password', userController.forgotPassword);
 
@@ -509,6 +603,232 @@ app.get('/logout', (req, res, next) => {
   }
 });
 
+
+
+// Reset Password Route (when user clicks on the reset link)
+app.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  try {
+    console.log("Received token:", token);
+
+    // Check if the token exists and is not expired
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiration: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      console.log("Invalid or expired token");
+      return res.status(400).render("error", { message: "Invalid or expired token." });
+    }
+
+    console.log("User found:", user);
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the user's password and clear the reset token
+    user.password = hashedPassword;
+    user.resetToken = undefined;
+    user.resetTokenExpiration = undefined;
+    await user.save();
+
+    res.status(200).render("success", { message: "Password reset successfully. You can now log in." });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    res.status(500).render("error", { message: "Internal server error." });
+  }
+});
+
+app.get('/admin/export-excel', async (req, res) => {
+  try {
+      const users = await User.find();
+      const transactions = await Transaction.find();
+
+      const workbook = new ExcelJS.Workbook();
+
+      // ===== Users Sheet =====
+      const usersSheet = workbook.addWorksheet('Users');
+      usersSheet.columns = [
+          { header: 'ID', key: '_id', width: 30 },
+          { header: 'Name', key: 'name', width: 25 },
+          { header: 'Email', key: 'email', width: 30 }
+      ];
+      users.forEach(user => usersSheet.addRow(user));
+
+      // ===== Transactions Sheet =====
+      const transactionsSheet = workbook.addWorksheet('Transactions');
+      transactionsSheet.columns = [
+          { header: 'ID', key: '_id', width: 30 },
+          { header: 'Name', key: 'name', width: 20 },
+          { header: 'Email', key: 'email', width: 30 },
+          { header: 'Plan', key: 'plan', width: 20 },
+          { header: 'Amount', key: 'amount', width: 15 },
+          { header: 'Status', key: 'status', width: 15 },
+          { header: 'Transaction Date', key: 'transaction_date', width: 25 },
+          { header: 'End Date', key: 'end_date', width: 25 }
+      ];
+
+      transactions.forEach(txn => {
+          transactionsSheet.addRow({
+              _id: txn._id,
+              name: txn.name,
+              email: txn.email,
+              plan: txn.plan,
+              amount: txn.amount,
+              status: txn.status,
+              transaction_date: txn.transaction_date ? new Date(txn.transaction_date).toLocaleString() : '',
+              end_date: txn.end_date ? new Date(txn.end_date).toLocaleString() : 'N/A'
+          });
+      });
+
+      // Export as Excel
+      const fileName = `All_Data_${Date.now()}.xlsx`;
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+
+      await workbook.xlsx.write(res);
+      res.end();
+  } catch (error) {
+      console.error("Excel Export Error:", error);
+      res.status(500).send("Error exporting Excel file.");
+  }
+});
+
+//
+app.post("/reset-password", async (req, res) => {
+  const { token, password } = req.body;
+
+  try {
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiration: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).send("Invalid or expired token.");
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    user.password = hashedPassword;
+    user.resetToken = undefined;
+    user.resetTokenExpiration = undefined;
+    await user.save();
+
+    res.send("✅ Password has been reset successfully. You can now log in.");
+  } catch (err) {
+    console.error("Error during password reset:", err);
+    res.status(500).send("Server error.");
+  }
+});
+
+app.post("/send-reset-link", async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.render("forgot-password", { successMessage: null, errorMessage: "User not found." });
+    }
+
+    // Generate token and set expiration
+    const token = crypto.randomBytes(32).toString("hex");
+    user.resetToken = token;
+    user.resetTokenExpiration = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    // Send reset link via email
+    const resetLink = `${process.env.BASE_URL}/reset-password?token=${token}`;
+    console.log("Reset link:", resetLink);
+
+    const mailOptions = {
+      from: `"StockTrade Support" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: "🔐 Reset Your Password",
+      html: `
+        <p>Hello ${user.name || "Trader"},</p>
+        <p>You requested a password reset. Click the link below to reset it:</p>
+        <a href="${resetLink}">${resetLink}</a>
+        <p>This link is valid for 1 hour. If you didn't request this, please ignore it.</p>
+      `,
+    };
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail(mailOptions);
+
+    // Render the page with a success message
+    res.render("forgot-password", { successMessage: `A reset link has been sent to ${email}.`, errorMessage: null });
+  } catch (err) {
+    console.error("Error sending reset link:", err);
+    res.render("forgot-password", { successMessage: null, errorMessage: "An error occurred. Please try again." });
+  }
+});
+
+
+
+
+// Display the reset password form
+app.get("/reset-password", async (req, res) => {
+  const { token } = req.query;
+
+  try {
+    console.log("Received token:", token);
+
+    if (!token) {
+      console.log("No token provided");
+      return res.status(400).render("error", { message: "Invalid reset link." });
+    }
+
+    // Check if the token exists and is not expired
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiration: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      console.log("Invalid or expired token");
+      return res.status(400).render("error", { message: "Reset token is invalid or has expired." });
+    }
+
+    console.log("User found:", user);
+    console.log("Token expiry:", user.resetTokenExpiration);
+
+    // Render the reset password form with the token
+    res.render("reset-password", { token });
+  } catch (error) {
+    console.error("Error in GET /reset-password:", error);
+    res.status(500).render("error", { message: "Internal server error." });
+  }
+});
+
+
+
+app.use(express.urlencoded({ extended: true }));
+app.use(helmet()); // Basic security headers
+app.use(
+  helmet.contentSecurityPolicy({
+    useDefaults: true,
+    directives: {
+      "style-src": ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
+      "font-src": ["https://fonts.gstatic.com"],
+      "script-src": ["'self'", "'unsafe-inline'"],
+    },
+  })
+);
+
+
+
 // Global Error Handler for unexpected errors
 app.use((err, req, res, next) => {
   console.error('Unexpected Error:', err);
@@ -519,3 +839,4 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
