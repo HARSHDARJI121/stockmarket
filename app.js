@@ -116,6 +116,10 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", "connect-src 'self' https://www.google-analytics.com");
+  next();
+});
 
 // Serve the favicon
 app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
