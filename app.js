@@ -18,7 +18,6 @@ const crypto = require('crypto');
 const ExcelJS = require('exceljs');
 const transporter = require('./utils/email');
 const helmet = require('helmet');
-const bcrypt = require('bcrypt');
 const bcrypt = require('bcryptjs');
 
 
