@@ -137,11 +137,11 @@ app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' blob:; " +
+    "script-src 'self' 'unsafe-inline' blob: https://www.googletagmanager.com https://www.google-analytics.com; " +
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
     "font-src https://fonts.gstatic.com; " +
-    "img-src 'self' data:; " +
-    "connect-src 'self';"
+    "img-src 'self' data: https://www.google-analytics.com; " +
+    "connect-src 'self' https://www.google-analytics.com;"
   );
   next();
 });
@@ -765,13 +765,13 @@ app.post("/send-reset-link", async (req, res) => {
     console.log('Email User:', process.env.EMAIL_USER);
     console.log('Email Pass:', process.env.EMAIL_PASS);
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-});
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      },
+    });
 
     await transporter.sendMail(mailOptions);
 
